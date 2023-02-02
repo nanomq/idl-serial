@@ -1,15 +1,7 @@
 %{
 #include <string.h>
 #include "parser.h"
-
-#define NDEBUG
-#ifdef NDEBUG
-#define debug(M, ...)
-#else
-#define debug(M, ...)                                                 \
-	fprintf(stderr, "[DEBUG] %s:%d: " M "\n", __FILE__, __LINE__, \
-	    ##__VA_ARGS__)
-#endif
+#include "dbg.h"
 
 %}
 
@@ -69,7 +61,11 @@ Variable                {Letter}[A-Za-z0-9_]*
 {Semic}                 { debug("Semic type: %s", yytext); return SEMIC; }
 {Enum}                  { debug("Enum type: %s", yytext); return ENUM; }
 {Struct}                { debug("Struct type: %s", yytext); return STRUCT; }
-{Variable}              { debug("Variable name: %s", yytext); return VARIABLE; }
+{Variable}              { 
+                            debug("Variable name: %s", yytext); 
+                            yylval.strval = strdup(yytext); 
+                            return VARIABLE; 
+                        }
 .                       { debug("Unrecognized %c", yytext[0]); }
 
 %%
