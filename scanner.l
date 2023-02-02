@@ -1,6 +1,16 @@
 %{
 #include <string.h>
-extern FILE *yyin;
+#include "parser.h"
+
+#define NDEBUG
+#ifdef NDEBUG
+#define debug(M, ...)
+#else
+#define debug(M, ...)                                                 \
+	fprintf(stderr, "[DEBUG] %s:%d: " M "\n", __FILE__, __LINE__, \
+	    ##__VA_ARGS__)
+#endif
+
 %}
 
 /* %option debug */
@@ -46,31 +56,20 @@ Letter                  [A-Za-z]
 Variable                {Letter}[A-Za-z0-9_]*
 
 %%
-{Ignored}               { /*printf("Ignored: %s\n", yytext);*/ }
-{Number}                { printf("Number type: %s\n", yytext); }
-{Integer}               { printf("Integer value: %s\n", yytext); }
-{String}                { printf("String type: %s\n", yytext); }
-{Boolean}               { printf("Boolean type: %s\n", yytext); }
-{Lcurly}                { printf("Lcurly type: %s\n", yytext); }
-{Rcurly}                { printf("Rcurly type: %s\n", yytext); }
-{Lbrac}                 { printf("Lbrac type: %s\n", yytext); }
-{Rbrac}                 { printf("Rbrac type: %s\n", yytext); }
-{Comma}                 { printf("Comma type: %s\n", yytext); }
-{Semic}                 { printf("Semic type: %s\n", yytext); }
-{Enum}                  { printf("Enum type: %s\n", yytext); }
-{Struct}                { printf("Struct type: %s\n", yytext); }
-{Variable}              { printf("Variable name: %s\n", yytext); } 
-.                       { printf("Unrecognized %c\n", yytext[0]); }
+{Ignored}               { /*debug("Ignored: %s\n", yytext);*/ }
+{Number}                { debug("Number type: %s", yytext); return NUMBER; }
+{Integer}               { debug("Integer value: %s", yytext); return INTEGER; }
+{String}                { debug("String type: %s", yytext); return STRING; }
+{Boolean}               { debug("Boolean type: %s", yytext); return BOOLEAN; }
+{Lcurly}                { debug("Lcurly type: %s", yytext); return LCURLY; }
+{Rcurly}                { debug("Rcurly type: %s", yytext); return RCURLY; }
+{Lbrac}                 { debug("Lbrac type: %s", yytext); return LBRAC; }
+{Rbrac}                 { debug("Rbrac type: %s", yytext); return RBRAC; }
+{Comma}                 { debug("Comma type: %s", yytext); return COMMA; }
+{Semic}                 { debug("Semic type: %s", yytext); return SEMIC; }
+{Enum}                  { debug("Enum type: %s", yytext); return ENUM; }
+{Struct}                { debug("Struct type: %s", yytext); return STRUCT; }
+{Variable}              { debug("Variable name: %s", yytext); return VARIABLE; }
+.                       { debug("Unrecognized %c", yytext[0]); }
 
 %%
-
-int main(int argc, char **argv)
-{
-  
-  if (!(yyin = fopen(argv[1], "r")))
-	{
-		perror((argv[1]));
-		return 0;
-	}
-  yylex();
-}
