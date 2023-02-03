@@ -47,7 +47,7 @@ values: value
                 $$ = cJSON_CreateArray();
                 cJSON_AddItemToArray($$, $1);
         }
-        | values valueA
+        | values value
         {
                 log_info("values SEMIC value");
                 cJSON_AddItemToArray($$, $2);
