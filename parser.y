@@ -2,19 +2,23 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "dbg.h"
+#include "cJSON.h"
 #define YYDEBUG 1
 
 extern FILE *yyin;
 extern int yylex();
-extern void yyerror(const char*);
+extern void yyerror(struct cJSON** jso, const char*);
 
 %}
 
+%parse-param {struct cJSON **jso}
 
 %union {
     int intval;
     char *strval;
+    struct cJSON *jsonval;
 }
 
 
@@ -24,51 +28,89 @@ extern void yyerror(const char*);
 %token <intval> INTEGER;
 
 
-%type  value
-%type  values
-%type  member
-%type  members
+%type <jsonval> value
+%type <jsonval> values
+%type <jsonval> member
+%type <jsonval> members
 %%
 
 start:  values
+        {
+                *jso = $1;
+        }
         | error
         ;
 
-values: value                   { log_info("Value terminate");}
-        | values value          { log_info("values SEMIC value"); }
+values: value
+        {
+                log_info("Value terminate");
+                $$ = cJSON_CreateArray();
+                cJSON_AddItemToArray($$, $1);
+        }
+        | values valueA
+        {
+                log_info("values SEMIC value");
+                cJSON_AddItemToArray($$, $2);
+        }
         ;
 
-value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC { log_info("STRUCT VARIABLE LCURLY members RCURLY"); }
+value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
+        {
+                log_info("STRUCT VARIABLE LCURLY members RCURLY");
+                $$ = cJSON_CreateObject();
+                cJSON_AddItemToObject($$, $2, $4);
+        }
         | NUMBER VARIABLE SEMIC                     { log_info("INTEGER VARIABLE"); }
         | ENUM VARIABLE LCURLY members RCURLY SEMIC { log_info("ENUM VARIABLE LCURLY members RCURLY"); }
         ;
 
-members: member                 { log_info("member"); }
-        | members member        { log_info("members member"); }
+members: member
+        {
+                log_info("member");
+                $$ = cJSON_CreateArray();
+                cJSON_AddItemToArray($$, $1);
+        }
+        | members member
+        {
+                log_info("members member");
+                cJSON_AddItemToArray($$, $2);
+
+        }
         ;
 
-member:  NUMBER VARIABLE SEMIC          { log_info("INTEGER VARIABLE SEMIC"); }
-         | BOOLEAN VARIABLE SEMIC       { log_info("BOOLEAN VARIABLE SEMIC"); }
-         | VARIABLE VARIABLE SEMIC      { log_info("VARIABLE VARIABLE SEMIC");}
-         | VARIABLE COMMA               { log_info("VARIABLE SEMIC"); }
-         | VARIABLE                     { log_info("VARIABLE"); }
-         ;
+member: NUMBER VARIABLE SEMIC
+        {
+                log_info("NUMBER VARIABLE SEMIC");
+                $$ = cJSON_CreateObject();
+                cJSON_AddStringToObject($$, "NUMBER", $2);
+        }
+        | BOOLEAN VARIABLE SEMIC
+        {
+                log_info("BOOLEAN VARIABLE SEMIC");
+                cJSON_AddStringToObject($$, "BOOLEAN", $2);
+                $$ = cJSON_CreateObject();
+                cJSON_AddStringToObject($$, "BOOLEAN", $2);
+
+        }
+        | VARIABLE VARIABLE SEMIC 
+        {
+                log_info("VARIABLE VARIABLE SEMIC");
+                cJSON_AddStringToObject($$, $1, $2);
+        }
+        | VARIABLE COMMA
+        {
+                log_info("VARIABLE SEMIC");
+        }
+        | VARIABLE                     
+        { 
+                log_info("VARIABLE"); 
+        }
+        ;
 
 
 %%
 
-void yyerror(const char *s)
+void yyerror(struct cJSON **jso, const char *s)
 {
         fprintf(stderr, "error: %s\n", s);
-}
-
-int main(int argc, char **argv)
-{
-
-  if (!(yyin = fopen(argv[1], "r")))
-	{
-		perror((argv[1]));
-		return 0;
-	}
-  yyparse();
 }
