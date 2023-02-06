@@ -70,7 +70,12 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 snprintf(tmp, 32, "NUMBER%s", $1);
                 cJSON_AddStringToObject($$, tmp, $2);
         }
-        | ENUM VARIABLE LCURLY members RCURLY SEMIC { log_info("ENUM VARIABLE LCURLY members RCURLY"); }
+        | ENUM VARIABLE LCURLY members RCURLY SEMIC
+        {
+                log_info("ENUM VARIABLE LCURLY members RCURLY");
+                $$ = cJSON_CreateObject();
+                cJSON_AddStringToObject($$, "ENUM", $2);
+        }
         ;
 
 members: member

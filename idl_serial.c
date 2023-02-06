@@ -93,6 +93,10 @@ int idl_serial_generator_to_json(cJSON *jso)
 				char *num_type = eles->string + num_len;
 				printf(ser_num_func, eles->valuestring, num_type);
 			}
+			else if (0 == strncmp(eles->string, "ENUM", strlen("ENUM")))
+			{
+				printf(ser_num_func, eles->valuestring, eles->valuestring);
+			}
 			else
 			{
 				printf(ser_func_head, eles->string, eles->string);
@@ -132,6 +136,10 @@ int idl_serial_generator_to_struct(cJSON *jso)
 			{
 				char *num_type = eles->string + num_len;
 				printf(deser_num_func, num_type, eles->valuestring);
+			}
+			else if (0 == strncmp(eles->string, "ENUM", strlen("ENUM")))
+			{
+				printf(deser_num_func, eles->valuestring, eles->valuestring);
 			}
 			else
 			{
