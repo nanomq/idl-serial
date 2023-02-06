@@ -23,9 +23,11 @@ extern void yyerror(struct cJSON** jso, const char*);
 
 
 %token LCURLY RCURLY LBRAC RBRAC COMMA SEMIC
-%token NUMBER STRING BOOLEAN ENUM STRUCT
+%token STRING BOOLEAN ENUM STRUCT
+%token <strval> NUMBER;
 %token <strval> VARIABLE;
 %token <intval> INTEGER;
+
 
 
 %type <jsonval> value
@@ -60,7 +62,14 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddItemToObject($$, $2, $4);
         }
-        | NUMBER VARIABLE SEMIC                     { log_info("INTEGER VARIABLE"); }
+        | NUMBER VARIABLE SEMIC
+        {
+                log_info("INTEGER VARIABLE");
+                $$ = cJSON_CreateObject();
+                char tmp[32] = {0};
+                snprintf(tmp, 32, "NUMBER%s", $1);
+                cJSON_AddStringToObject($$, tmp, $2);
+        }
         | ENUM VARIABLE LCURLY members RCURLY SEMIC { log_info("ENUM VARIABLE LCURLY members RCURLY"); }
         ;
 
