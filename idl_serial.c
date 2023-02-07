@@ -24,7 +24,7 @@ static char deser_num_func[] =
 static char ser_arr_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *arr)"
 	"\n{\n"
-	"\n\treturn cJSON_CreateDoubleArray((const double *)arr, %d);\n"
+	"\n\treturn cJSON_Create%sArray((const double *)arr, %d);\n"
 	"\n}\n";
 
 static char deser_arr_func[] =
@@ -122,7 +122,22 @@ int idl_serial_generator_to_json(cJSON *jso)
 				char *num_type = eles->string + strlen(arr);
 				char *val_name = strchr(num_type, '_');
 				*val_name++ = '\0';
-				printf(ser_arr_func, val_name, num_type, eles->valueint);
+
+				char u32[] = "uint32";
+				char dou[] = "double";
+				char flo[] = "float";
+				char i64[] = "int64";
+
+
+				if (NULL != strstr(num_type, "64") || NULL != strstr(num_type, "long") || NULL != strstr(num_type, u32) || NULL != strstr(num_type, dou) || NULL != strstr(num_type, flo)) {
+					if (0 == strcmp("long", num_type)) {
+						printf(ser_arr_func, val_name, num_type, "Int", eles->valueint);
+					} else {
+						printf(ser_arr_func, val_name, num_type, "Double", eles->valueint);
+					}
+				} else {
+					printf(ser_arr_func, val_name, num_type, "Int", eles->valueint);
+				}
 			}
 			else
 			{
