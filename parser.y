@@ -76,6 +76,32 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, "ENUM", $2);
         }
+        | NUMBER VARIABLE LBRAC INTEGER RBRAC SEMIC
+        {
+                log_info("NUMBER VARIABLE LBRAC INTEGER RBRAC");
+                $$ = cJSON_CreateObject();
+                char tmp[64] = {0};
+                snprintf(tmp, 64, "ARRAY%s_%s", $1, $2);
+                cJSON_AddNumberToObject($$, tmp, $4);
+        }
+        | BOOLEAN VARIABLE LBRAC INTEGER RBRAC SEMIC
+        {
+                log_info("BOOLEAN VARIABLE LBRAC INTEGER RBRAC");
+                $$ = cJSON_CreateObject();
+                char tmp[64] = {0};
+                snprintf(tmp, 64, "ARRAY%s_%s", "bool", $2);
+                cJSON_AddNumberToObject($$, tmp, $4);
+        }
+        | VARIABLE VARIABLE LBRAC INTEGER RBRAC SEMIC
+        {
+                log_info("VARIABLE VARIABLE LBRAC INTEGER RBRAC");
+                $$ = cJSON_CreateObject();
+                char tmp[64] = {0};
+                snprintf(tmp, 64, "ARRAY%s%s", $1, $2);
+                cJSON_AddNumberToObject($$, tmp, $4);
+
+        }
+
         ;
 
 members: member

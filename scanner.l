@@ -49,7 +49,6 @@ Variable                {Letter}[A-Za-z0-9_]*
 
 %%
 {Ignored}               { /*debug("Ignored: %s\n", yytext);*/ }
-{Integer}               { debug("Integer value: %s", yytext); return INTEGER; }
 {String}                { debug("String type: %s", yytext); return STRING; }
 {Boolean}               { debug("Boolean type: %s", yytext); return BOOLEAN; }
 {Lcurly}                { debug("Lcurly type: %s", yytext); return LCURLY; }
@@ -60,6 +59,11 @@ Variable                {Letter}[A-Za-z0-9_]*
 {Semic}                 { debug("Semic type: %s", yytext); return SEMIC; }
 {Enum}                  { debug("Enum type: %s", yytext); return ENUM; }
 {Struct}                { debug("Struct type: %s", yytext); return STRUCT; }
+{Integer}               {
+                            debug("Integer value: %s", yytext);
+                            yylval.intval = atoi(yytext);
+                            return INTEGER;
+                        }
 {Number}                {
                             debug("Number type: %s", yytext);
                             yylval.strval = strdup(yytext);
