@@ -20,6 +20,19 @@ static char deser_num_func[] =
 	"\n\treturn cJSON_GetNumberValue(jso);\n"
 	"\n}\n\n";
 
+static char deser_arr_func[] =
+	"\n%s *mqtt_to_dds_%s_convert(cJSON *jso)"
+	"\n{"
+	"\n\t%s *arr = (%s*) malloc(%d*sizeof(%s));"
+	"\n\tcJSON *item = NULL;"
+	"\n\tint i = 0;"
+	"\n\tcJSON_ArrayForEach(item, jso) {"
+	"\n\t\tarr[i++] = item->valuedouble;"
+	"\n\t}"
+	"\n\treturn arr;\n"
+	"\n}\n\n";
+
+
 static char ser_func_head[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *st)"
 	"\n{\n"
@@ -131,15 +144,24 @@ int idl_serial_generator_to_struct(cJSON *jso)
 		{
 
 			char num[] = "NUMBER";
-			char num_len = strlen(num);
-			if (0 == strncmp(eles->string, num, num_len))
+			char arr[] = "ARRAY";
+			char enu[] = "ENUM";
+
+			if (0 == strncmp(eles->string, num, strlen(num)))
 			{
-				char *num_type = eles->string + num_len;
+				char *num_type = eles->string + strlen(num);
 				printf(deser_num_func, num_type, eles->valuestring);
 			}
-			else if (0 == strncmp(eles->string, "ENUM", strlen("ENUM")))
+			else if (0 == strncmp(eles->string, enu, strlen(enu)))
 			{
 				printf(deser_num_func, eles->valuestring, eles->valuestring);
+			}
+			else if (0 == strncmp(eles->string, arr, strlen(arr)))
+			{
+				char *num_type = eles->string + strlen(arr);
+				char *val_name = strchr(num_type, '_');
+				*val_name++ = '\0';
+				printf(deser_arr_func, num_type, val_name, num_type, num_type, eles->valueint, num_type);
 			}
 			else
 			{
