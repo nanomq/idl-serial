@@ -9,6 +9,11 @@
 
 extern FILE *yyin;
 
+static char g_num[] = "NUMBER";
+static char g_arr[] = "ARRAY";
+static char g_enu[] = "ENUM";
+static char g_str[] = "STRING";
+
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s num)"
 	"\n{\n"
@@ -19,6 +24,21 @@ static char deser_num_func[] =
 	"\n%s mqtt_to_dds_%s_convert(cJSON *jso)"
 	"\n{\n"
 	"\n\treturn cJSON_GetNumberValue(jso);\n"
+	"\n}\n\n";
+
+static char ser_str_func[] =
+	"\ncJSON *dds_to_mqtt_%s_convert(char *str)"
+	"\n{\n"
+	"\n\tcJSON *obj = cJSON_CreateObject();"
+	"\n\tcJSON_AddStringToObject(obj, \"%s\", str);"
+	"\n\treturn obj;\n"
+	"\n}\n";
+
+static char deser_str_func[] =
+	"\nchar *mqtt_to_dds_%s_convert(cJSON *jso)"
+	"\n{\n"
+	"\n\tcJSON *item = cJSON_GetObjectItem(jso, \"%s\");"
+	"\n\treturn item->valuestring;"
 	"\n}\n\n";
 
 static char ser_arr_func[] =
@@ -105,21 +125,22 @@ int idl_serial_generator_to_json(cJSON *jso)
 		cJSON_ArrayForEach(eles, arr)
 		{
 
-			char num[] = "NUMBER";
-			char arr[] = "ARRAY";
-			char enu[] = "ENUM";
-			if (0 == strncmp(eles->string, num, strlen(num)))
+			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
 			{
-				char *num_type = eles->string + strlen(num);
+				char *num_type = eles->string + strlen(g_num);
 				printf(ser_num_func, eles->valuestring, num_type);
 			}
-			else if (0 == strncmp(eles->string, enu, strlen(enu)))
+			else if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
 				printf(ser_num_func, eles->valuestring, eles->valuestring);
 			}
-			else if (0 == strncmp(eles->string, arr, strlen(arr)))
+			else if (0 == strncmp(eles->string, g_str, strlen(g_str)))
 			{
-				char *num_type = eles->string + strlen(arr);
+				printf(ser_str_func, eles->valuestring, eles->valuestring);
+			}
+			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
+			{
+				char *num_type = eles->string + strlen(g_arr);
 				char *val_name = strchr(num_type, '_');
 				*val_name++ = '\0';
 
@@ -172,22 +193,22 @@ int idl_serial_generator_to_struct(cJSON *jso)
 		cJSON_ArrayForEach(eles, arr)
 		{
 
-			char num[] = "NUMBER";
-			char arr[] = "ARRAY";
-			char enu[] = "ENUM";
-
-			if (0 == strncmp(eles->string, num, strlen(num)))
+			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
 			{
-				char *num_type = eles->string + strlen(num);
+				char *num_type = eles->string + strlen(g_num);
 				printf(deser_num_func, num_type, eles->valuestring);
 			}
-			else if (0 == strncmp(eles->string, enu, strlen(enu)))
+			else if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
 				printf(deser_num_func, eles->valuestring, eles->valuestring);
 			}
-			else if (0 == strncmp(eles->string, arr, strlen(arr)))
+			else if (0 == strncmp(eles->string, g_str, strlen(g_str)))
 			{
-				char *num_type = eles->string + strlen(arr);
+				printf(deser_str_func, "string", eles->valuestring);
+			}
+			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
+			{
+				char *num_type = eles->string + strlen(g_arr);
 				char *val_name = strlen(num_type) + num_type +1;
 				printf(deser_arr_func, num_type, val_name, num_type, num_type, eles->valueint, num_type);
 			}
