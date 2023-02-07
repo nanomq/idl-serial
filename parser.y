@@ -22,7 +22,7 @@ extern void yyerror(struct cJSON** jso, const char*);
 }
 
 
-%token LCURLY RCURLY LBRAC RBRAC COMMA SEMIC
+%token LCURLY RCURLY LBRAC RBRAC LMBRAC RMBRAC COMMA SEMIC
 %token STRING BOOLEAN ENUM STRUCT
 %token <strval> NUMBER;
 %token <strval> VARIABLE;
@@ -76,31 +76,37 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, "STRING", $2);
         }
+        | STRING LBRAC INTEGER RBRAC VARIABLE SEMIC
+        {
+                log_info("STRING LBRAC INTEGER RBRAC VARIABLE SEMIC");
+                $$ = cJSON_CreateObject();
+                cJSON_AddStringToObject($$, "STRING", $5);
+        }
         | ENUM VARIABLE LCURLY members RCURLY SEMIC
         {
                 log_info("ENUM VARIABLE LCURLY members RCURLY");
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, "ENUM", $2);
         }
-        | NUMBER VARIABLE LBRAC INTEGER RBRAC SEMIC
+        | NUMBER VARIABLE LMBRAC INTEGER RMBRAC SEMIC
         {
-                log_info("NUMBER VARIABLE LBRAC INTEGER RBRAC");
+                log_info("NUMBER VARIABLE LMBRAC INTEGER RMBRAC");
                 $$ = cJSON_CreateObject();
                 char tmp[64] = {0};
                 snprintf(tmp, 64, "ARRAY%s_%s", $1, $2);
                 cJSON_AddNumberToObject($$, tmp, $4);
         }
-        | BOOLEAN VARIABLE LBRAC INTEGER RBRAC SEMIC
+        | BOOLEAN VARIABLE LMBRAC INTEGER RMBRAC SEMIC
         {
-                log_info("BOOLEAN VARIABLE LBRAC INTEGER RBRAC");
+                log_info("BOOLEAN VARIABLE LMBRAC INTEGER RMBRAC");
                 $$ = cJSON_CreateObject();
                 char tmp[64] = {0};
                 snprintf(tmp, 64, "ARRAY%s_%s", "bool", $2);
                 cJSON_AddNumberToObject($$, tmp, $4);
         }
-        | VARIABLE VARIABLE LBRAC INTEGER RBRAC SEMIC
+        | VARIABLE VARIABLE LMBRAC INTEGER RMBRAC SEMIC
         {
-                log_info("VARIABLE VARIABLE LBRAC INTEGER RBRAC");
+                log_info("VARIABLE VARIABLE LMBRAC INTEGER RMBRAC");
                 $$ = cJSON_CreateObject();
                 char tmp[64] = {0};
                 snprintf(tmp, 64, "ARRAY%s%s", $1, $2);

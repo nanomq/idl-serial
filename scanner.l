@@ -16,8 +16,10 @@ Ignored                 {WhiteSpace}|{Comment}
 /* Symbol */
 Lcurly                  "{"
 Rcurly                  "}"
-Lbrac                   "["
-Rbrac                   "]"
+Lbrac                   "<"
+Rbrac                   ">"
+LMbrac                  "["
+RMbrac                  "]"
 Comma                   ","
 Semic                   ";"
 
@@ -55,6 +57,8 @@ Variable                {Letter}[A-Za-z0-9_]*
 {Rcurly}                { debug("Rcurly type: %s", yytext); return RCURLY; }
 {Lbrac}                 { debug("Lbrac type: %s", yytext); return LBRAC; }
 {Rbrac}                 { debug("Rbrac type: %s", yytext); return RBRAC; }
+{LMbrac}                { debug("LMbrac type: %s", yytext); return LMBRAC; }
+{RMbrac}                { debug("RMbrac type: %s", yytext); return RMBRAC; }
 {Comma}                 { debug("Comma type: %s", yytext); return COMMA; }
 {Semic}                 { debug("Semic type: %s", yytext); return SEMIC; }
 {Enum}                  { debug("Enum type: %s", yytext); return ENUM; }
