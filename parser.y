@@ -23,7 +23,7 @@ extern void yyerror(struct cJSON** jso, const char*);
 
 
 %token LCURLY RCURLY LBRAC RBRAC LMBRAC RMBRAC COMMA SEMIC
-%token STRING BOOLEAN ENUM STRUCT
+%token STRING SEQUENCE BOOLEAN ENUM STRUCT
 %token <strval> NUMBER;
 %token <strval> VARIABLE;
 %token <intval> INTEGER;
@@ -34,6 +34,7 @@ extern void yyerror(struct cJSON** jso, const char*);
 %type <jsonval> values
 %type <jsonval> member
 %type <jsonval> members
+%type <strval> data_type
 %%
 
 start:  values
@@ -82,6 +83,25 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, "STRING", $5);
         }
+        | SEQUENCE LBRAC data_type RBRAC VARIABLE SEMIC
+        {
+                log_info("SEQUENCE LBRAC %s RBRAC VARIABLE SEMIC", $3);
+                $$ = cJSON_CreateObject();
+                char tmp[64] = {0};
+                snprintf(tmp, 64, "SEQUENCE%s", $3);
+                cJSON_AddStringToObject($$, tmp, $5);
+
+
+        }
+        | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC VARIABLE SEMIC
+        {
+                log_info("SEQUENCE LBRAC %s COMMA INTEGER RBRAC VARIABLE SEMIC", $3);
+                $$ = cJSON_CreateObject();
+                char tmp[64] = {0};
+                snprintf(tmp, 64, "SEQUENCE%s_%s", $3, $7);
+                cJSON_AddNumberToObject($$, tmp, $5);
+        }
+
         | ENUM VARIABLE LCURLY members RCURLY SEMIC
         {
                 log_info("ENUM VARIABLE LCURLY members RCURLY");
@@ -115,6 +135,18 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
         }
 
         ;
+
+data_type: NUMBER
+        {
+                log_info("NUMBER");
+                $$ = $1;
+        }
+        | BOOLEAN
+        {
+                log_info("BOOLEAN");
+                $$ = "BOOLEAN";
+
+        }
 
 members: member
         {
