@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "utils.h"
 #include "dbg.h"
 #include "cJSON.h"
 #define YYDEBUG 1
@@ -19,6 +20,7 @@ extern void yyerror(struct cJSON** jso, const char*);
     int intval;
     char *strval;
     struct cJSON *jsonval;
+    struct object *objval;
 }
 
 
@@ -34,7 +36,7 @@ extern void yyerror(struct cJSON** jso, const char*);
 %type <jsonval> values
 %type <jsonval> member
 %type <jsonval> members
-%type <strval> data_type
+%type <objval> data_type
 %%
 
 start:  values
@@ -85,20 +87,18 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
         }
         | SEQUENCE LBRAC data_type RBRAC VARIABLE SEMIC
         {
-                log_info("SEQUENCE LBRAC %s RBRAC VARIABLE SEMIC", $3);
+                log_info("SEQUENCE LBRAC %s RBRAC VARIABLE SEMIC", $3->data);
                 $$ = cJSON_CreateObject();
                 char tmp[64] = {0};
-                snprintf(tmp, 64, "SEQUENCE%s", $3);
+                snprintf(tmp, 64, "SEQUENCE%s", $3->data);
                 cJSON_AddStringToObject($$, tmp, $5);
-
-
         }
         | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC VARIABLE SEMIC
         {
-                log_info("SEQUENCE LBRAC %s COMMA INTEGER RBRAC VARIABLE SEMIC", $3);
+                log_info("SEQUENCE LBRAC %s COMMA INTEGER RBRAC VARIABLE SEMIC", $3->data);
                 $$ = cJSON_CreateObject();
                 char tmp[64] = {0};
-                snprintf(tmp, 64, "SEQUENCE%s_%s", $3, $7);
+                snprintf(tmp, 64, "SEQUENCE%s_%s", $3->data, $7);
                 cJSON_AddNumberToObject($$, tmp, $5);
         }
 
@@ -133,26 +133,15 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 cJSON_AddNumberToObject($$, tmp, $4);
 
         }
-
         ;
 
-data_type: NUMBER
-        {
-                log_info("NUMBER");
-                $$ = $1;
-        }
-        | BOOLEAN
-        {
-                log_info("BOOLEAN");
-                $$ = "BOOLEAN";
-
-        }
 
 members: member
         {
                 log_info("member");
                 $$ = cJSON_CreateArray();
                 cJSON_AddItemToArray($$, $1);
+                puts(cJSON_PrintUnformatted($$));
         }
         | members member
         {
@@ -162,18 +151,30 @@ members: member
         }
         ;
 
-member: NUMBER VARIABLE SEMIC
+member: data_type VARIABLE SEMIC
         {
-                log_info("NUMBER VARIABLE SEMIC");
-                $$ = cJSON_CreateObject();
-                cJSON_AddStringToObject($$, "NUMBER", $2);
-        }
-        | BOOLEAN VARIABLE SEMIC
-        {
-                log_info("BOOLEAN VARIABLE SEMIC");
-                cJSON_AddStringToObject($$, "BOOLEAN", $2);
-                $$ = cJSON_CreateObject();
-                cJSON_AddStringToObject($$, "BOOLEAN", $2);
+                switch ($1->type)
+                {
+                case OBJECT_TYPE_NUMBER:
+                        log_info("NUMBER VARIABLE SEMIC");
+                        $$ = cJSON_CreateObject();
+                        cJSON_AddStringToObject($$, "NUMBER", $2);
+                        break;
+                case OBJECT_TYPE_BOOLEAN:
+                        log_info("BOOLEAN VARIABLE SEMIC");
+                        $$ = cJSON_CreateObject();
+                        cJSON_AddStringToObject($$, "BOOLEAN", $2);
+                        break;
+                case OBJECT_TYPE_STRING:
+                        log_info("STRING VARIABLE SEMIC");
+                        break;
+                case OBJECT_TYPE_SEQUENCE:
+                        log_info("SEQUENCE VARIABLE SEMIC");
+                        break;
+                default:
+                        log_err("Unsupport type: %d", $1->type);
+                        break;
+                }
 
         }
         | VARIABLE VARIABLE SEMIC 
@@ -191,6 +192,27 @@ member: NUMBER VARIABLE SEMIC
         }
         ;
 
+
+data_type: NUMBER
+        {
+                log_info("NUMBER");
+                $$ = object_alloc(OBJECT_TYPE_NUMBER, $1);
+        }
+        | BOOLEAN
+        {
+                log_info("BOOLEAN");
+                $$ = object_alloc(OBJECT_TYPE_BOOLEAN, "bool");
+        }
+        | STRING
+        {
+                log_info("STRING");
+                $$ = object_alloc(OBJECT_TYPE_STRING, NULL);
+        }
+        | SEQUENCE
+        {
+                log_info("SEQUENCE");
+                $$ = object_alloc(OBJECT_TYPE_SEQUENCE, NULL);
+        }
 
 %%
 
