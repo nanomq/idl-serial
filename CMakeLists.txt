@@ -10,7 +10,7 @@ find_package(BISON 3.0 REQUIRED)
 
 set(LEXER_OUT "${PARSER_DIR}/scanner.c")
 set(PARSER_OUT "${PARSER_DIR}/parser.c")
-set(SRC "cJSON.c" "idl_serial.c")
+set(SRC "cJSON.c" "idl_serial.c" "utils.c")
 
 
 option(ASAN "Build with address sanitizer" OFF)

@@ -41,6 +41,10 @@ Boolean                 boolean
 StrT                    (<({Hex}|{Integer})>)
 String                  string{StrT}?
 
+
+/* Sequence type */
+Sequence                sequence
+
 /* Enum && struct type */
 Enum                    enum
 Struct                  struct
@@ -52,6 +56,7 @@ Variable                {Letter}[A-Za-z0-9_]*
 %%
 {Ignored}               { /*debug("Ignored: %s\n", yytext);*/ }
 {String}                { debug("String type: %s", yytext); return STRING; }
+{Sequence}              { debug("Sequence type: %s", yytext); return SEQUENCE; }
 {Boolean}               { debug("Boolean type: %s", yytext); return BOOLEAN; }
 {Lcurly}                { debug("Lcurly type: %s", yytext); return LCURLY; }
 {Rcurly}                { debug("Rcurly type: %s", yytext); return RCURLY; }
