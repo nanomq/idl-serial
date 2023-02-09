@@ -218,7 +218,7 @@ data_type: NUMBER
         {
                 log_info("STRING LBRAC INTEGER RBRAC");
                 char tmp[32] = { 0 };
-                snprintf(tmp, 32, "STRING_%s", $3);
+                snprintf(tmp, 32, "STRING_%d", $3);
                 $$ = object_alloc(OBJECT_TYPE_STRING_T, tmp);
         }
         | SEQUENCE

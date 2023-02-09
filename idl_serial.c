@@ -90,26 +90,57 @@ const char *cJSON_Add(char *key)
 	{
 		return "cJSON_AddNumberToObject";
 	}
+	else if (0 == strcmp(key, "STRING"))
+	{
+		return "cJSON_AddStringToObject";
+	}
+	else if (0 == strncmp(key, "STRING_", strlen("STRING_")))
+	{
+		return "cJSON_AddStringToObject";
+	}
 	else
 	{
 		return "Unsupport now";
 	}
 }
 
-const char *cJSON_Get(char *key)
+const char *cJSON_Get(cJSON *item)
 {
-	if (0 == strcmp(key, "BOOLEAN"))
-	{
-		return "";
+	char fmt_non_cp[] = "\tst->%s = item->value%s;\n";
+	char fmt_cp[] = "\tstrncpy(st->%s, item->value%s, %d);\n";
+	char fmt_dup[] = "\tstrdup(st->%s, item->value%s);\n";
+	char *type = item->string;
+	char *name = item->valuestring;
+	char *ret = (char*) malloc(sizeof(char)*64);
+	if (NULL == ret) {
+		log_err("malloc error");
 	}
-	else if (0 == strcmp(key, "NUMBER"))
+
+	if (0 == strcmp(type, "BOOLEAN"))
 	{
-		return "";
+		snprintf(ret, 64, fmt_non_cp, "bool", name);
+	}
+	else if (0 == strcmp(type, "NUMBER"))
+	{
+		snprintf(ret, 64, fmt_non_cp, "double", name);
+	}
+	else if (0 == strncmp(type, "STRING_", strlen("STRING_")))
+	{
+		int len = 0;
+		sscanf(type, "STRING_%d", &len);
+		snprintf(ret, 64, fmt_cp, "string", name, len);
+	}
+	else if (0 == strcmp(type, "STRING"))
+	{
+		snprintf(ret, 64, fmt_dup, "string", name);
 	}
 	else
 	{
-		return "Unsupport now";
+		log_err("Nonsupport now");
+		return NULL;
 	}
+
+	return ret;
 }
 
 int idl_serial_generator_to_json(cJSON *jso)
@@ -221,7 +252,7 @@ int idl_serial_generator_to_struct(cJSON *jso)
 					cJSON_ArrayForEach(e, ele)
 					{
 						printf("\titem = cJSON_GetObjectItem(obj, \"%s\");\n", e->valuestring);
-						printf("\tst->%s = item->valuedouble;\n", e->valuestring);
+						puts(cJSON_Get(e));
 					}
 				}
 
