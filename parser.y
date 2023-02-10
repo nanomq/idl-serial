@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "dbg.h"
 #include "cJSON.h"
+#include "cvector.h"
 #define YYDEBUG 1
 
 extern FILE *yyin;
@@ -18,6 +19,7 @@ extern void yyerror(struct cJSON** jso, const char*);
 
 %union {
     int intval;
+    int *intsval;
     char *strval;
     struct cJSON *jsonval;
     struct object *objval;
@@ -37,6 +39,8 @@ extern void yyerror(struct cJSON** jso, const char*);
 %type <jsonval> member
 %type <jsonval> members
 %type <objval> data_type
+%type <intval> data_dim
+%type <intsval> data_dims
 %%
 
 start:  values
@@ -174,6 +178,11 @@ member: data_type VARIABLE SEMIC
                         $$ = cJSON_CreateObject();
                         cJSON_AddStringToObject($$, $1->data, $2);
                         break;
+                case OBJECT_TYPE_ARRAY:
+                        log_info("ARRAY VARIABLE SEMIC");
+                        $$ = cJSON_CreateObject();
+                        cJSON_AddStringToObject($$, $1->data, $2);
+                        break;
                 case OBJECT_TYPE_SEQUENCE:
                         log_info("SEQUENCE VARIABLE SEMIC");
                         break;
@@ -182,6 +191,41 @@ member: data_type VARIABLE SEMIC
                         break;
                 }
 
+        }
+        | data_type VARIABLE data_dims SEMIC
+        {
+                log_info("LBRAC data_type RBRAC");
+                char tmp[64];
+                size_t size = 0;
+
+                switch ($1->type)
+                {
+                case OBJECT_TYPE_NUMBER:
+                        size = snprintf(tmp, 64, "ARRAY_NUMBER_%s", $1->data);
+                        break;
+                case OBJECT_TYPE_BOOLEAN:
+                        size = snprintf(tmp, 64, "ARRAY_BOOLEAN_%s", $1->data);
+                        break;
+                case OBJECT_TYPE_STRING:
+                        size = snprintf(tmp, 64, "ARRAY_STRING_%s", $1->data);
+                        log_err("");
+                        break;
+                case OBJECT_TYPE_STRING_T:
+                        size = snprintf(tmp, 64, "ARRAY_STRING_T_%s", $1->data);
+                        break;
+                default:
+                        log_err("Unsupport type: %d", $1->type);
+                        break;
+                }
+
+                char *where = tmp + size;
+                for (int i = 0; i < cvector_size($3); i++) {
+                        size = snprintf(where, 64, "_%d", $3[i]);
+                        where = where + size;
+                        log_err("%s", tmp);
+                }
+                $$ = cJSON_CreateObject();
+                cJSON_AddStringToObject($$, tmp, $2);
         }
         | VARIABLE VARIABLE SEMIC 
         {
@@ -192,7 +236,7 @@ member: data_type VARIABLE SEMIC
         {
                 log_info("VARIABLE SEMIC");
         }
-        | VARIABLE                     
+        | VARIABLE
         { 
                 log_info("VARIABLE"); 
         }
@@ -212,20 +256,34 @@ data_type: NUMBER
         | STRING
         {
                 log_info("STRING");
-                $$ = object_alloc(OBJECT_TYPE_STRING, NULL);
+                $$ = object_alloc(OBJECT_TYPE_STRING, "string");
         }
         | STRING LBRAC INTEGER RBRAC
         {
                 log_info("STRING LBRAC INTEGER RBRAC");
                 char tmp[32] = { 0 };
-                snprintf(tmp, 32, "STRING_%d", $3);
+                snprintf(tmp, 32, "string_%d", $3);
                 $$ = object_alloc(OBJECT_TYPE_STRING_T, tmp);
         }
-        | SEQUENCE
+
+data_dims: data_dim
         {
-                log_info("SEQUENCE");
-                $$ = object_alloc(OBJECT_TYPE_SEQUENCE, NULL);
+                log_info("data_dim");
+                $$ = NULL;
+                cvector_push_back($$, $1);
         }
+        | data_dims data_dim
+        {
+                log_info("data_dims data_dim");
+                cvector_push_back($$, $2);
+        }
+
+data_dim: LMBRAC INTEGER RMBRAC
+        {
+                log_info("LMBRAC INTEGER RMBRAC");
+                $$ = $2;
+        }
+
 
 %%
 
