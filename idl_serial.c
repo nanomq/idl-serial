@@ -87,8 +87,24 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 		int times = 0;
 		char tab[32] = {0};
 		tab[times] = '\t';
-		printf("%scJSON *arr%d = cJSON_CreateArray();\n", tab, times);
-		printf("%scJSON_AddItemToObject(obj, \"%s\", arr%d)\n", tab, val, times);
+
+
+		if (strchr(p, '_'))
+		{
+			printf("%scJSON *%s%d = cJSON_CreateArray();\n", tab, val, times);
+			printf("%scJSON_AddItemToObject(obj, \"%s\", %s%d)\n", tab, val, val, times);
+		}
+		else
+		{
+			int num = atoi(p);
+			char tmp[64];
+			size_t size = snprintf(tmp, 64, "st->%s", val);
+			printf("%scJSON *%s = cJSON_Create%sArray(%s, %d);\n", tab, val, type, tmp, num);
+			printf("%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		}
+
+
+
 		while (p = strchr(p, '_'))
 		{
 
@@ -101,8 +117,8 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 
 			if (strchr(p, '_'))
 			{
-				printf("%s\tcJSON *arr%d = cJSON_CreateArray();\n", tab, times + 1);
-				printf("%s\tcJSON_AddItemToArray(arr%d, arr%d);\n", tab, times, times + 1);
+				printf("%s\tcJSON *%s%d = cJSON_CreateArray();\n", tab, val, times + 1);
+				printf("%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
 			}
 			else
 			{
@@ -115,8 +131,8 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 					size = snprintf(where, 64, "[i%d]", i);
 					where = where + size;
 				}
-				printf("%s\tcJSON *eles = cJSON_Create%sArray(%s, %d);\n", tab, type, tmp, num);
-				printf("%s\tcJSON_AddItemToArray(arr%d, eles);\n", tab, times);
+				printf("%s\tcJSON *%s%d = cJSON_Create%sArray(%s, %d);\n", tab, val, times + 1, type, tmp, num);
+				printf("%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times+1);
 			}
 
 			tab[++times] = '\t';
@@ -127,6 +143,7 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 			tab[times--] = '\0';
 			printf("%s}\n", tab);
 		}
+		printf("\n");
 
 }
 
@@ -136,18 +153,22 @@ void cJSON_AddArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
+	printf("\n\t// %s\n", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
-		p += strlen("BOOLEAN");
-		ret = "cJSON_AddBoolToObject";
+
+		p += strlen("BOOLEAN_bool_");
+		cJSON_AddArrayCommon(p, val, "Number");
 	}
 	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
 	{
 		// NUMBER_uint16_100_200
 		p += strlen("NUMBER_");
-		cJSON_AddArrayCommon(p, val, "Number");
+		p = strchr(p, '_') + 1;
+
+		cJSON_AddArrayCommon(p, val, "Double");
 	}
-	else if (0 == strncmp(p, "STRING_", strlen("STRING_")))
+	else if (0 == strncmp(p, "STRING_T_", strlen("STRING_T_")))
 	{
 		// STRING_T_string_100_3222_2222
 		p += strlen("STRING_T_string_");
@@ -155,7 +176,8 @@ void cJSON_AddArray(char *key, char *val)
 	}
 	else if (0 == strncmp(p, "STRING", strlen("STRING")))
 	{
-		p += strlen("STRING");
+		p += strlen("STRING_string_");
+		cJSON_AddArrayCommon(p, val, "String");
 	}
 }
 
