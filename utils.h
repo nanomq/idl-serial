@@ -6,6 +6,7 @@ typedef enum
     OBJECT_TYPE_NUMBER,
     OBJECT_TYPE_BOOLEAN,
     OBJECT_TYPE_STRING,
+    OBJECT_TYPE_STRING_T,
     OBJECT_TYPE_SEQUENCE
 } object_type;
 

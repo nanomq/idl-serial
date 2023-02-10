@@ -38,9 +38,7 @@ Integer                 ([0-9]*)
 Boolean                 boolean
 
 /* String type */
-StrT                    (<({Hex}|{Integer})>)
-String                  string{StrT}?
-
+String                  string
 
 /* Sequence type */
 Sequence                sequence
