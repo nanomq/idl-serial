@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "cJSON.h"
 #include "dbg.h"
+#include "cvector.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -80,28 +81,138 @@ static char deser_func_tail[] =
 	"\n\treturn st;"
 	"\n}\n\n";
 
-const char *cJSON_Add(char *key)
+void cJSON_AddArrayCommon(char *p, char *val, char *type)
 {
+		char *p_b = p;
+		int times = 0;
+		char tab[32] = {0};
+		tab[times] = '\t';
+
+
+		if (strchr(p, '_'))
+		{
+			printf("%scJSON *%s%d = cJSON_CreateArray();\n", tab, val, times);
+			printf("%scJSON_AddItemToObject(obj, \"%s\", %s%d)\n", tab, val, val, times);
+		}
+		else
+		{
+			int num = atoi(p);
+			char tmp[64];
+			size_t size = snprintf(tmp, 64, "st->%s", val);
+			printf("%scJSON *%s = cJSON_Create%sArray(%s, %d);\n", tab, val, type, tmp, num);
+			printf("%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		}
+
+
+
+		while (p = strchr(p, '_'))
+		{
+
+			*p = '\0';
+			int num = atoi(p_b);
+			printf("%sfor (int i%d = 0; i%d < %d; i%d++) {\n", tab, times, times, num, times);
+
+			*p++ = '_';
+			p_b = p;
+
+			if (strchr(p, '_'))
+			{
+				printf("%s\tcJSON *%s%d = cJSON_CreateArray();\n", tab, val, times + 1);
+				printf("%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
+			}
+			else
+			{
+				num = atoi(p);
+				char tmp[64];
+				size_t size = snprintf(tmp, 64, "st->%s", val);
+				char *where = tmp + size;
+				for (int i = 0; i <= times; i++)
+				{
+					size = snprintf(where, 64, "[i%d]", i);
+					where = where + size;
+				}
+				printf("%s\tcJSON *%s%d = cJSON_Create%sArray(%s, %d);\n", tab, val, times + 1, type, tmp, num);
+				printf("%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times+1);
+			}
+
+			tab[++times] = '\t';
+		}
+
+		while (times)
+		{
+			tab[times--] = '\0';
+			printf("%s}\n", tab);
+		}
+		printf("\n");
+
+}
+
+void cJSON_AddArray(char *key, char *val)
+{
+
+	char *p = key + strlen("ARRAY_");
+	char *ret = NULL;
+
+	printf("\n\t// %s\n", key);
+	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
+	{
+
+		p += strlen("BOOLEAN_bool_");
+		cJSON_AddArrayCommon(p, val, "Number");
+	}
+	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
+	{
+		// NUMBER_uint16_100_200
+		p += strlen("NUMBER_");
+		p = strchr(p, '_') + 1;
+
+		cJSON_AddArrayCommon(p, val, "Double");
+	}
+	else if (0 == strncmp(p, "STRING_T_", strlen("STRING_T_")))
+	{
+		// STRING_T_string_100_3222_2222
+		p += strlen("STRING_T_string_");
+		cJSON_AddArrayCommon(p, val, "String");
+	}
+	else if (0 == strncmp(p, "STRING", strlen("STRING")))
+	{
+		p += strlen("STRING_string_");
+		cJSON_AddArrayCommon(p, val, "String");
+	}
+}
+
+void cJSON_Add(cJSON *jso)
+{
+	char *key = jso->string;
+	char *val = jso->valuestring;
+
 	if (0 == strcmp(key, "BOOLEAN"))
 	{
-		return "cJSON_AddBoolToObject";
+		printf("\tcJSON_AddBoolToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strcmp(key, "NUMBER"))
 	{
-		return "cJSON_AddNumberToObject";
+		printf("\tcJSON_AddNumberToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strcmp(key, "STRING"))
 	{
-		return "cJSON_AddStringToObject";
+		printf("\tcJSON_AddStringToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strncmp(key, "STRING_", strlen("STRING_")))
 	{
-		return "cJSON_AddStringToObject";
+		printf("\tcJSON_AddStringToObject(obj, \"%s\", st->%s);\n", val, val);
+	}
+	else if (0 == strncmp(key, "ARRAY", strlen("ARRAY")))
+	{
+		// ARRAY_STRING_T_string_100_3222_2222
+		cJSON_AddArray(key, val);
+
 	}
 	else
 	{
-		return "Unsupport now";
+		log_err("Unsupport now");
 	}
+	return;
 }
 
 const char *cJSON_Get(cJSON *item)
@@ -111,8 +222,9 @@ const char *cJSON_Get(cJSON *item)
 	char fmt_dup[] = "\tstrdup(st->%s, item->value%s);\n";
 	char *type = item->string;
 	char *name = item->valuestring;
-	char *ret = (char*) malloc(sizeof(char)*64);
-	if (NULL == ret) {
+	char *ret = (char *)malloc(sizeof(char) * 64);
+	if (NULL == ret)
+	{
 		log_err("malloc error");
 	}
 
@@ -128,6 +240,16 @@ const char *cJSON_Get(cJSON *item)
 	{
 		int len = 0;
 		sscanf(type, "STRING_%d", &len);
+		snprintf(ret, 64, fmt_cp, "string", name, len);
+	}
+	else if (0 == strcmp(type, "STRING"))
+	{
+		snprintf(ret, 64, fmt_dup, "string", name);
+	}
+	else if (0 == strncmp(type, "SEQUENCE_", strlen("SEQUENCE_")))
+	{
+		int len = 0;
+		sscanf(type, "SEQUENCE_%d", &len);
 		snprintf(ret, 64, fmt_cp, "string", name, len);
 	}
 	else if (0 == strcmp(type, "STRING"))
@@ -180,14 +302,19 @@ int idl_serial_generator_to_json(cJSON *jso)
 				char flo[] = "float";
 				char i64[] = "int64";
 
-
-				if (NULL != strstr(num_type, "64") || NULL != strstr(num_type, "long") || NULL != strstr(num_type, u32) || NULL != strstr(num_type, dou) || NULL != strstr(num_type, flo)) {
-					if (0 == strcmp("long", num_type)) {
+				if (NULL != strstr(num_type, "64") || NULL != strstr(num_type, "long") || NULL != strstr(num_type, u32) || NULL != strstr(num_type, dou) || NULL != strstr(num_type, flo))
+				{
+					if (0 == strcmp("long", num_type))
+					{
 						printf(ser_arr_func, val_name, num_type, "Int", eles->valueint);
-					} else {
+					}
+					else
+					{
 						printf(ser_arr_func, val_name, num_type, "Double", eles->valueint);
 					}
-				} else {
+				}
+				else
+				{
 					printf(ser_arr_func, val_name, num_type, "Int", eles->valueint);
 				}
 			}
@@ -199,7 +326,7 @@ int idl_serial_generator_to_json(cJSON *jso)
 				{
 					cJSON_ArrayForEach(e, ele)
 					{
-						printf("\t%s(obj, \"%s\", st->%s);\n", cJSON_Add(e->string), e->valuestring, e->valuestring);
+						cJSON_Add(e);
 					}
 				}
 
@@ -240,7 +367,7 @@ int idl_serial_generator_to_struct(cJSON *jso)
 			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
 			{
 				char *num_type = eles->string + strlen(g_arr);
-				char *val_name = strlen(num_type) + num_type +1;
+				char *val_name = strlen(num_type) + num_type + 1;
 				printf(deser_arr_func, num_type, val_name, num_type, num_type, eles->valueint, num_type);
 			}
 			else
@@ -280,10 +407,11 @@ int idl_serial_generator(const char *file)
 		fprintf(stderr, "invalid data to parse!\n");
 		return -1;
 	}
+
 	puts(cJSON_PrintUnformatted(jso));
 
 	idl_serial_generator_to_json(jso);
-	idl_serial_generator_to_struct(jso);
+	// idl_serial_generator_to_struct(jso);
 
 	return 0;
 }
