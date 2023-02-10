@@ -175,8 +175,10 @@ member: data_type VARIABLE SEMIC
                         break;
                 case OBJECT_TYPE_STRING_T:
                         log_info("STRING TEMPLATE VARIABLE SEMIC");
+                        char tmp[64]; 
+                        snprintf(tmp, 64, "STRING_T_%s", $1->data);
                         $$ = cJSON_CreateObject();
-                        cJSON_AddStringToObject($$, $1->data, $2);
+                        cJSON_AddStringToObject($$, tmp, $2);
                         break;
                 case OBJECT_TYPE_ARRAY:
                         log_info("ARRAY VARIABLE SEMIC");
