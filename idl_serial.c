@@ -359,13 +359,14 @@ void cJSON_GetArray(char *key, char *val)
 	}
 }
 
-const char *cJSON_Get(cJSON *item)
+void cJSON_Get(cJSON *item)
 {
 	char fmt_non_cp[] = "\tst->%s = item->value%s;\n";
 	char fmt_cp[] = "\tstrncpy(st->%s, item->value%s, %d);\n";
 	char fmt_dup[] = "\tstrdup(st->%s, item->value%s);\n";
 	char *type = item->string;
 	char *name = item->valuestring;
+
 	char *ret = (char *)malloc(sizeof(char) * 64);
 	if (NULL == ret)
 	{
@@ -383,7 +384,7 @@ const char *cJSON_Get(cJSON *item)
 	else if (0 == strncmp(type, "STRING_", strlen("STRING_")))
 	{
 		int len = 0;
-		sscanf(type, "STRING_%d", &len);
+		sscanf(type, "STRING_T_string_%d", &len);
 		snprintf(ret, 64, fmt_cp, "string", name, len);
 	}
 	else if (0 == strcmp(type, "STRING"))
@@ -407,10 +408,11 @@ const char *cJSON_Get(cJSON *item)
 	else
 	{
 		log_err("Nonsupport now : %s", type);
-		return NULL;
+		return;
 	}
 
-	return ret;
+	puts(ret);
+	return;
 }
 
 int idl_serial_generator_to_json(cJSON *jso)
