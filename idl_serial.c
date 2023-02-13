@@ -242,15 +242,15 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		}
 		if (0 == strncmp(type, "string", strlen("string")))
 		{
-			printf("%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
+			printf("%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
 		}
 		else if (0 == strncmp(type, "string_", strlen("string_")))
 		{
-			printf("%s%s = strcpy(%s%d->value%s);\n", tab, tmp, val, times, type);
+			printf("%s%s = strcpy(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
 		}
 		else
 		{
-			printf("%s%s = %s%d->value%s;\n", tab, tmp, val, times, type);
+			printf("%s%s = %s%d->value%s;\n", tab, tmp, val, times - 1, type);
 		}
 		tab[times--] = '\0';
 	}

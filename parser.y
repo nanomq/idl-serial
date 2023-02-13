@@ -224,7 +224,6 @@ member: data_type VARIABLE SEMIC
                 for (int i = 0; i < cvector_size($3); i++) {
                         size = snprintf(where, 64, "_%d", $3[i]);
                         where = where + size;
-                        log_err("%s", tmp);
                 }
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, tmp, $2);
