@@ -217,12 +217,12 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 	char tab[16] = {0};
 	tab[times] = '\t';
 	static bool first_time = true;
-	first_time = false;
 
 	first_time ? printf("%sint i%d = 0;\n", tab, 0) : printf("%si%d = 0;\n", tab, 0);
-	// printf("%sint i%d = 0;\n", tab, 0);
+
+	first_time = false;
 	printf("%scJSON *%s%d = NULL;\n", tab, val, times);
-	printf("%scJSON_ArrayForEach(item, %s%d) {\n", tab, val, times, val, times + 1);
+	printf("%scJSON_ArrayForEach(item, %s%d) {\n", tab, val, times);
 	tab[++times] = '\t';
 
 	if (strchr(p, '_'))
@@ -240,8 +240,18 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 			size = snprintf(where, 64, "[i%d]", i);
 			where = where + size;
 		}
-		printf("%s%s = %s%d->value%s;\n", tab, tmp, val, times, type);
-		// printf("%si0++;\n", tab);
+		if (0 == strncmp(type, "string", strlen("string")))
+		{
+			printf("%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
+		}
+		else if (0 == strncmp(type, "string_", strlen("string_")))
+		{
+			printf("%s%s = strcpy(%s%d->value%s);\n", tab, tmp, val, times, type);
+		}
+		else
+		{
+			printf("%s%s = %s%d->value%s;\n", tab, tmp, val, times, type);
+		}
 		tab[times--] = '\0';
 	}
 
@@ -257,37 +267,49 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		*p++ = '_';
 		p_b = p;
 
-		char tmp[64];
-		size_t size = snprintf(tmp, 64, "st->%s", val);
-		char *where = tmp + size;
-		for (int i = 0; i <= times; i++)
+		if (NULL == strchr(p, '_'))
 		{
-			size = snprintf(where, 64, "[i%d]", i);
-			where = where + size;
-		}
-		printf("%s\t%s = %s%d->value%s;\n", tab, tmp, val, times, type);
 
-		if (strchr(p, '_'))
-		{
-		}
-		else
-		{
-			tab[++times] = '\t';
-			printf("%sint i%d = 0;\n", tab, times);
-			printf("%scJSON *%s%d = NULL;\n", tab, val, times);
-			printf("%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
-			*p++ = '_';
-			p_b = p;
-
-			char tmp[64];
-			size_t size = snprintf(tmp, 64, "st->%s", val);
-			char *where = tmp + size;
-			for (int i = 0; i <= times; i++)
+			if (0 == strncmp(type, "string_", strlen("string_")))
 			{
-				size = snprintf(where, 64, "[i%d]", i);
-				where = where + size;
+				char tmp[64];
+				size_t size = snprintf(tmp, 64, "st->%s", val);
+				char *where = tmp + size;
+				for (int i = 0; i <= times; i++)
+				{
+					size = snprintf(where, 64, "[i%d]", i);
+					where = where + size;
+				}
+
+				printf("%s\tstrcpy(%s, %s%d->valuestring);\n", tab, tmp, val, times);
 			}
-			printf("%s\t%s = %s%d->value%s;\n", tab, tmp, val, times, type);
+			else
+			{
+
+				tab[++times] = '\t';
+				printf("%sint i%d = 0;\n", tab, times);
+				printf("%scJSON *%s%d = NULL;\n", tab, val, times);
+				printf("%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
+				*p++ = '_';
+				p_b = p;
+
+				char tmp[64];
+				size_t size = snprintf(tmp, 64, "st->%s", val);
+				char *where = tmp + size;
+				for (int i = 0; i <= times; i++)
+				{
+					size = snprintf(where, 64, "[i%d]", i);
+					where = where + size;
+				}
+				if (0 == strncmp(type, "string", strlen("string")))
+				{
+					printf("%s\t%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
+				}
+				else
+				{
+					printf("%s\t%s = %s%d->value%s;\n", tab, tmp, val, times, type);
+				}
+			}
 			break;
 		}
 
@@ -315,11 +337,10 @@ void cJSON_GetArray(char *key, char *val)
 	{
 
 		p += strlen("BOOLEAN_bool_");
-		// cJSON_AddArrayCommon(p, val, "Number");
+		cJSON_GetArrayCommon(p, val, "int");
 	}
 	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
 	{
-		// NUMBER_uint16_100_200
 		p += strlen("NUMBER_");
 		p = strchr(p, '_') + 1;
 
@@ -329,12 +350,12 @@ void cJSON_GetArray(char *key, char *val)
 	{
 		// STRING_T_string_100_3222_2222
 		p += strlen("STRING_T_string_");
-		// cJSON_AddArrayCommon(p, val, "String");
+		cJSON_GetArrayCommon(p, val, "string_");
 	}
 	else if (0 == strncmp(p, "STRING", strlen("STRING")))
 	{
 		p += strlen("STRING_string_");
-		// cJSON_AddArrayCommon(p, val, "String");
+		cJSON_GetArrayCommon(p, val, "string");
 	}
 }
 
