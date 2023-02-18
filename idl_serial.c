@@ -17,9 +17,9 @@ static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
 
 static char ser_num_func[] =
-	"\ncJSON *dds_to_mqtt_%s_convert(%s num)"
+	"\ncJSON *dds_to_mqtt_%s_convert(%s *num)"
 	"\n{\n"
-	"\n\treturn cJSON_CreateNumber(num);\n"
+	"\n\treturn cJSON_CreateNumber(*num);\n"
 	"\n}\n";
 
 static char deser_num_func[] =
@@ -75,12 +75,18 @@ static char ser_func_tail[] =
 static char deser_func_head[] =
 	"\n%s *mqtt_to_dds_%s_convert(cJSON *jso)"
 	"\n{"
-	"\n\t%s *st = (%s) malloc(sizeof(*st));"
+	"\n\t%s *st = (%s*) malloc(sizeof(*st));"
 	"\n\tcJSON *item = NULL;\n";
 
 static char deser_func_tail[] =
 	"\n\treturn st;"
 	"\n}\n\n";
+
+static char ser_func_call[] =
+	"\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(st->%s));\n";
+
+static char deser_func_call[] =
+	"\n\tst->%s = mqtt_to_dds_%s_convert(item);\n";
 
 void cJSON_AddArrayCommon(char *p, char *val, char *type)
 {
@@ -205,7 +211,8 @@ void cJSON_Add(cJSON *jso)
 	}
 	else
 	{
-		log_err("Unsupport now");
+		printf(ser_func_call, val, key, val);
+		// log_err("Unsupport now: %s", key);
 	}
 	return;
 }
@@ -375,31 +382,31 @@ void cJSON_Get(cJSON *item)
 
 	if (0 == strcmp(type, "BOOLEAN"))
 	{
-		snprintf(ret, 64, fmt_non_cp, "bool", name);
+		snprintf(ret, 64, fmt_non_cp, name, "bool");
 	}
 	else if (0 == strcmp(type, "NUMBER"))
 	{
-		snprintf(ret, 64, fmt_non_cp, "double", name);
+		snprintf(ret, 64, fmt_non_cp, name, "double");
 	}
 	else if (0 == strncmp(type, "STRING_", strlen("STRING_")))
 	{
 		int len = 0;
 		sscanf(type, "STRING_T_string_%d", &len);
-		snprintf(ret, 64, fmt_cp, "string", name, len);
+		snprintf(ret, 64, fmt_cp, name, "string", len);
 	}
 	else if (0 == strcmp(type, "STRING"))
 	{
-		snprintf(ret, 64, fmt_dup, "string", name);
+		snprintf(ret, 64, fmt_dup, name, "string");
 	}
 	else if (0 == strncmp(type, "SEQUENCE_", strlen("SEQUENCE_")))
 	{
 		int len = 0;
 		sscanf(type, "SEQUENCE_%d", &len);
-		snprintf(ret, 64, fmt_cp, "string", name, len);
+		snprintf(ret, 64, fmt_cp, name, "string", len);
 	}
 	else if (0 == strcmp(type, "STRING"))
 	{
-		snprintf(ret, 64, fmt_dup, "string", name);
+		snprintf(ret, 64, fmt_dup, name, "string");
 	}
 	else if (0 == strncmp(type, "ARRAY_", strlen("ARRAY_")))
 	{
@@ -407,8 +414,9 @@ void cJSON_Get(cJSON *item)
 	}
 	else
 	{
-		log_err("Nonsupport now : %s", type);
-		return;
+		snprintf(ret, 64, deser_func_call, name, type);
+		// log_err("Nonsupport now : %s", type);
+		// return;
 	}
 
 	puts(ret);
@@ -427,7 +435,6 @@ int idl_serial_generator_to_json(cJSON *jso)
 	{
 		cJSON_ArrayForEach(eles, arr)
 		{
-
 			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
 			{
 				char *num_type = eles->string + strlen(g_num);

@@ -231,6 +231,7 @@ member: data_type VARIABLE SEMIC
         | VARIABLE VARIABLE SEMIC 
         {
                 log_info("VARIABLE VARIABLE SEMIC");
+                $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, $1, $2);
         }
         | VARIABLE COMMA
