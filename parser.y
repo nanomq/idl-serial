@@ -187,6 +187,10 @@ member: data_type VARIABLE SEMIC
                         break;
                 case OBJECT_TYPE_SEQUENCE:
                         log_info("SEQUENCE VARIABLE SEMIC");
+                        tmp[64]; 
+                        snprintf(tmp, 64, "sequence_%s", $1->data);
+                        $$ = cJSON_CreateObject();
+                        cJSON_AddStringToObject($$, tmp, $2);
                         break;
                 default:
                         log_err("Unsupport type: %d", $1->type);
@@ -228,6 +232,14 @@ member: data_type VARIABLE SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, tmp, $2);
         }
+        | SEQUENCE LBRAC data_type RBRAC SEMIC
+        {
+
+        }
+        | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC SEMIC
+        {
+
+        }
         | VARIABLE VARIABLE SEMIC 
         {
                 log_info("VARIABLE VARIABLE SEMIC");
@@ -266,6 +278,50 @@ data_type: NUMBER
                 char tmp[32] = { 0 };
                 snprintf(tmp, 32, "string_%d", $3);
                 $$ = object_alloc(OBJECT_TYPE_STRING_T, tmp);
+        }
+        | SEQUENCE LBRAC data_type RBRAC
+        {
+
+                log_info("SEQUENCE LBRAC data_type RBRAC");
+                char tmp[64] = { 0 };
+
+                 switch ($3->type)
+                 {
+                 case OBJECT_TYPE_NUMBER:
+                 case OBJECT_TYPE_BOOLEAN:
+                 case OBJECT_TYPE_STRING:
+                         log_info("NUMBER/BOOLEAN/STRING VARIABLE SEMIC");
+                         snprintf(tmp, 64, "%s", $3->data);
+                         break;
+                 case OBJECT_TYPE_STRING_T:
+                         log_info("STRING TEMPLATE VARIABLE SEMIC");
+                         snprintf(tmp, 64, "%s", $3->data);
+                         break;
+                 case OBJECT_TYPE_ARRAY:
+                         log_info("ARRAY VARIABLE SEMIC");
+                         snprintf(tmp, 64, "%s", $3->data);
+                         break;
+                 case OBJECT_TYPE_SEQUENCE:
+                         snprintf(tmp, 64, "sequence_%s", $3->data);
+                         log_info("SEQUENCE VARIABLE SEMIC");
+                         break;
+                 default:
+                         log_err("Unsupport type: %d", $3->type);
+                         break;
+                 }
+ 
+
+                $$ = object_alloc(OBJECT_TYPE_SEQUENCE, tmp);
+                log_info("%s", tmp);
+
+        }
+        | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC
+        {
+                log_info("SEQUENCE LBRAC data_type COMMA INTEGER RBRAC");
+                char tmp[64] = { 0 };
+                snprintf(tmp, 64, "sequence_%s", $3->data);
+                $$ = object_alloc(OBJECT_TYPE_SEQUENCE, tmp);
+                log_info("%s", tmp);
         }
 
 data_dims: data_dim
