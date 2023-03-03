@@ -205,7 +205,7 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 	if (1 == i)
 	{
 		p_b += strlen("sequence") + 1;
-		if (0 == strcmp(p, "string"))
+		if (0 == strcmp(p_b, "string"))
 		{
 			printf("%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
 		}
