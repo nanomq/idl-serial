@@ -150,7 +150,6 @@ members: member
         {
                 log_info("members member");
                 cJSON_AddItemToArray($$, $2);
-
         }
         ;
 
@@ -214,7 +213,6 @@ member: data_type VARIABLE SEMIC
                         break;
                 case OBJECT_TYPE_STRING:
                         size = snprintf(tmp, 64, "ARRAY_STRING_%s", $1->data);
-                        log_err("");
                         break;
                 case OBJECT_TYPE_STRING_T:
                         size = snprintf(tmp, 64, "ARRAY_STRING_T_%s", $1->data);
@@ -231,14 +229,6 @@ member: data_type VARIABLE SEMIC
                 }
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, tmp, $2);
-        }
-        | SEQUENCE LBRAC data_type RBRAC SEMIC
-        {
-
-        }
-        | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC SEMIC
-        {
-
         }
         | VARIABLE VARIABLE SEMIC 
         {
@@ -318,10 +308,8 @@ data_type: NUMBER
         | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC
         {
                 log_info("SEQUENCE LBRAC data_type COMMA INTEGER RBRAC");
-                char tmp[64] = { 0 };
-                snprintf(tmp, 64, "sequence_%s", $3->data);
-                $$ = object_alloc(OBJECT_TYPE_SEQUENCE, tmp);
-                log_info("%s", tmp);
+                $$ = object_alloc(OBJECT_TYPE_SEQUENCE, $3->data);
+                log_info("%s", $3->data);
         }
 
 data_dims: data_dim
