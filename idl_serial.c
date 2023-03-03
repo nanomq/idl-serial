@@ -24,9 +24,9 @@ static char ser_num_func[] =
 	"\n}\n";
 
 static char deser_num_func[] =
-	"\n%s mqtt_to_dds_%s_convert(cJSON *jso)"
+	"\n%s mqtt_to_dds_%s_convert(cJSON *obj)"
 	"\n{\n"
-	"\n\treturn cJSON_GetNumberValue(jso);\n"
+	"\n\treturn cJSON_GetNumberValue(obj);\n"
 	"\n}\n\n";
 
 static char ser_str_func[] =
@@ -38,9 +38,9 @@ static char ser_str_func[] =
 	"\n}\n";
 
 static char deser_str_func[] =
-	"\nchar *mqtt_to_dds_%s_convert(cJSON *jso)"
+	"\nchar *mqtt_to_dds_%s_convert(cJSON *obj)"
 	"\n{\n"
-	"\n\tcJSON *item = cJSON_GetObjectItem(jso, \"%s\");"
+	"\n\tcJSON *item = cJSON_GetObjectItem(obj, \"%s\");"
 	"\n\treturn item->valuestring;"
 	"\n}\n\n";
 
@@ -51,12 +51,12 @@ static char ser_arr_func[] =
 	"\n}\n";
 
 static char deser_arr_func[] =
-	"\n%s *mqtt_to_dds_%s_convert(cJSON *jso)"
+	"\n%s *mqtt_to_dds_%s_convert(cJSON *obj)"
 	"\n{"
 	"\n\t%s *arr = (%s*) malloc(%d*sizeof(%s));"
 	"\n\tcJSON *item = NULL;"
 	"\n\tint i = 0;"
-	"\n\tcJSON_ArrayForEach(item, jso) {"
+	"\n\tcJSON_ArrayForEach(item, obj) {"
 	"\n\t\tarr[i++] = item->valuedouble;"
 	"\n\t}"
 	"\n\treturn arr;\n"
@@ -74,7 +74,7 @@ static char ser_func_tail[] =
 	"\n}\n\n";
 
 static char deser_func_head[] =
-	"\n%s *mqtt_to_dds_%s_convert(cJSON *jso)"
+	"\n%s *mqtt_to_dds_%s_convert(cJSON *obj)"
 	"\n{"
 	"\n\t%s *st = (%s*) malloc(sizeof(*st));"
 	"\n\tcJSON *item = NULL;\n";
@@ -157,7 +157,7 @@ void cJSON_AddArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
-	fprintf(g_fp, "\n\t// %s\n", key);
+	fprintf(g_fp, "\n\t// %s", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 
@@ -192,7 +192,7 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 	static char tab[32] = {0};
 	tab[*times] = '\t';
 
-	fprintf(g_fp, "\n%s// %s\n", tab, key);
+	fprintf(g_fp, "\n%s// %s", tab, key);
 	char *p = key;
 	char *p_b = p;
 	char *ret = NULL;
@@ -208,14 +208,14 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 		p_b += strlen("sequence") + 1;
 		if (0 == strcmp(p_b, "string"))
 		{
-			fprintf(g_fp, "%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
+			fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);", tab, val, val, val);
 		}
 		else
 		{
-			fprintf(g_fp, "%scJSON * %s_arr0 = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
+			fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);", tab, val, val, val);
 		}
 
-		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s_arr0);\n", tab, val, val);
+		fprintf(g_fp, "\n%scJSON_AddItemToObject(obj, \"%s\", %s_arr0);", tab, val, val);
 		return;
 	}
 
@@ -425,10 +425,9 @@ void cJSON_GetArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
-	fprintf(g_fp, "\n\t// %s\n", key);
+	fprintf(g_fp, "\n\t// %s", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
-
 		p += strlen("BOOLEAN_bool_");
 		cJSON_GetArrayCommon(p, val, "int");
 	}
@@ -462,7 +461,7 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	char *p = key;
 	char *ret = NULL;
 
-	fprintf(g_fp, "\n%s// %s\n", tab, key);
+	fprintf(g_fp, "\n%s// %s", tab, key);
 
 	// sequence<double> sl;
 	int i = 0;
@@ -724,6 +723,13 @@ int idl_json_to_struct(cJSON *jso)
 	return 0;
 }
 
+
+int idl_append_header(void)
+{
+	fprintf(g_fp, "#include \"cJSON.h\"\n");
+	fprintf(g_fp, "#include \"dds_type.h\"\n");
+}
+
 int idl_serial_generator(const char *file, const char *out)
 {
 	int rv = 0;
@@ -747,10 +753,12 @@ int idl_serial_generator(const char *file, const char *out)
 
 	g_fp = fopen(out, "w");
 
+	idl_append_header();
 	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
 
 	cJSON_free(str);
+	cJSON_Delete(jso);
 	fclose(g_fp);
 
 	return 0;
