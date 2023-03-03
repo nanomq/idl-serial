@@ -213,7 +213,6 @@ member: data_type VARIABLE SEMIC
                         break;
                 case OBJECT_TYPE_STRING:
                         size = snprintf(tmp, 64, "ARRAY_STRING_%s", $1->data);
-                        log_err("");
                         break;
                 case OBJECT_TYPE_STRING_T:
                         size = snprintf(tmp, 64, "ARRAY_STRING_T_%s", $1->data);

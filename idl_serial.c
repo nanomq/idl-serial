@@ -65,7 +65,7 @@ static char deser_arr_func[] =
 static char ser_func_head[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *st)"
 	"\n{\n"
-	"\n 	cJSON *obj     = NULL;"
+	"\n 	cJSON *obj = NULL;"
 	"\n 	/* Assemble cJSON* obj with *st. */"
 	"\n 	obj = cJSON_CreateObject();\n";
 
@@ -157,7 +157,7 @@ void cJSON_AddArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
-	fprintf(g_fp, "\n\t// %s", key);
+	fprintf(g_fp, "\n\t// %s\n", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 
@@ -192,7 +192,7 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 	static char tab[32] = {0};
 	tab[*times] = '\t';
 
-	fprintf(g_fp, "\n%s// %s", tab, key);
+	fprintf(g_fp, "\n\n%s// %s", tab, key);
 	char *p = key;
 	char *p_b = p;
 	char *ret = NULL;
@@ -206,7 +206,7 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 	if (1 == i)
 	{
 		p_b += strlen("sequence") + 1;
-		if (0 == strcmp(p_b, "string"))
+		if (0 == strncmp(p_b, "string", strlen("string")))
 		{
 			fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);", tab, val, val, val);
 		}
@@ -245,8 +245,8 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 		{
 
 			fprintf(g_fp, "\n%scJSON *%s_arr%d = cJSON_CreateArray();\n", tab, val, i);
-			fprintf(g_fp, "\n%sfor (int %s_i%d = 0; %s_i%d < st->%s->_length; %s_i%d++) {", tab, val, i, val, i, tmp, val, i);
-			size = snprintf(where, 128, "->_buffer[%s_i%d]", val, i);
+			fprintf(g_fp, "\n%sfor (int i%d = 0; i%d < st->%s->_length; i%d++) {", tab, i, i, tmp, i);
+			size = snprintf(where, 128, "->_buffer[i%d]", i);
 			where = where + size;
 
 			i++;
@@ -425,7 +425,7 @@ void cJSON_GetArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
-	fprintf(g_fp, "\n\t// %s", key);
+	fprintf(g_fp, "\n\t// %s\n", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 		p += strlen("BOOLEAN_bool_");
@@ -450,6 +450,21 @@ void cJSON_GetArray(char *key, char *val)
 		cJSON_GetArrayCommon(p, val, "string");
 	}
 }
+
+void clean_data(char *p)
+{
+	char *p_b = strrchr(p, '_');
+	if (atoi(p_b+1)) {
+		*p_b = '\0';
+	}
+	p_b = p;
+
+	while ((p_b = strchr(p_b, ' '))) {
+		*p_b = '_';
+	} 
+
+}
+
 
 void cJSON_GetSequence(char *key, char *val, int *times)
 {
@@ -486,6 +501,7 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	where = tmp + size;
 	while ((p = strstr(p, "sequence")))
 	{
+		clean_data(p);
 		fprintf(g_fp, "\n%ssize_t %s_sz%d = cJSON_GetArraySize(%s_array%d);", tab, val, i, val, i);
 		fprintf(g_fp, "\n%sst->%s = dds_%s__alloc();", tab, tmp, p);
 		fprintf(g_fp, "\n%sst->%s->_buffer = dds_%s_allocbuf(%s_sz%d);", tab, tmp, p, val, i);
@@ -754,7 +770,7 @@ int idl_serial_generator(const char *file, const char *out)
 	g_fp = fopen(out, "w");
 
 	idl_append_header();
-	idl_struct_to_json(jso);
+	// idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
 
 	cJSON_free(str);
