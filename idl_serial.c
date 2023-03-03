@@ -15,6 +15,7 @@ static char g_num[] = "NUMBER";
 static char g_arr[] = "ARRAY";
 static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
+static FILE *g_fp = NULL;
 
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *num)"
@@ -97,16 +98,16 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 
 	if (strchr(p, '_'))
 	{
-		printf("%scJSON *%s%d = cJSON_CreateArray();\n", tab, val, times);
-		printf("%scJSON_AddItemToObject(obj, \"%s\", %s%d)\n", tab, val, val, times);
+		fprintf(g_fp, "%scJSON *%s%d = cJSON_CreateArray();\n", tab, val, times);
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s%d)\n", tab, val, val, times);
 	}
 	else
 	{
 		int num = atoi(p);
 		char tmp[64];
 		size_t size = snprintf(tmp, 64, "st->%s", val);
-		printf("%scJSON *%s = cJSON_Create%sArray(%s, %d);\n", tab, val, type, tmp, num);
-		printf("%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		fprintf(g_fp, "%scJSON *%s = cJSON_Create%sArray(%s, %d);\n", tab, val, type, tmp, num);
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
 	}
 
 	while (p = strchr(p, '_'))
@@ -114,15 +115,15 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 
 		*p = '\0';
 		int num = atoi(p_b);
-		printf("%sfor (int i%d = 0; i%d < %d; i%d++) {\n", tab, times, times, num, times);
+		fprintf(g_fp, "%sfor (int i%d = 0; i%d < %d; i%d++) {\n", tab, times, times, num, times);
 
 		*p++ = '_';
 		p_b = p;
 
 		if (strchr(p, '_'))
 		{
-			printf("%s\tcJSON *%s%d = cJSON_CreateArray();\n", tab, val, times + 1);
-			printf("%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
+			fprintf(g_fp, "%s\tcJSON *%s%d = cJSON_CreateArray();\n", tab, val, times + 1);
+			fprintf(g_fp, "%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
 		}
 		else
 		{
@@ -135,8 +136,8 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 				size = snprintf(where, 64, "[i%d]", i);
 				where = where + size;
 			}
-			printf("%s\tcJSON *%s%d = cJSON_Create%sArray(%s, %d);\n", tab, val, times + 1, type, tmp, num);
-			printf("%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
+			fprintf(g_fp, "%s\tcJSON *%s%d = cJSON_Create%sArray(%s, %d);\n", tab, val, times + 1, type, tmp, num);
+			fprintf(g_fp, "%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
 		}
 
 		tab[++times] = '\t';
@@ -145,9 +146,9 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 	while (times)
 	{
 		tab[times--] = '\0';
-		printf("%s}\n", tab);
+		fprintf(g_fp, "%s}\n", tab);
 	}
-	printf("\n");
+	fprintf(g_fp, "\n");
 }
 
 void cJSON_AddArray(char *key, char *val)
@@ -156,7 +157,7 @@ void cJSON_AddArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
-	printf("\n\t// %s\n", key);
+	fprintf(g_fp, "\n\t// %s\n", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 
@@ -191,7 +192,7 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 	static char tab[32] = {0};
 	tab[*times] = '\t';
 
-	printf("\n%s// %s\n", tab, key);
+	fprintf(g_fp, "\n%s// %s\n", tab, key);
 	char *p = key;
 	char *p_b = p;
 	char *ret = NULL;
@@ -207,17 +208,16 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 		p_b += strlen("sequence") + 1;
 		if (0 == strcmp(p_b, "string"))
 		{
-			printf("%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
+			fprintf(g_fp, "%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
 		}
 		else
 		{
-			printf("%scJSON * %s_arr0 = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
+			fprintf(g_fp, "%scJSON * %s_arr0 = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);\n", tab, val, val, val);
 		}
 
-		printf("%scJSON_AddItemToObject(obj, \"%s\", %s_arr0);\n", tab, val, val);
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s_arr0);\n", tab, val, val);
 		return;
 	}
-
 
 	p = key;
 	i = 0;
@@ -234,18 +234,18 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 			p += strlen("sequence");
 			if (0 == strncmp(p, "string", strlen("string")))
 			{
-				printf("\n%scJSON * %s_arr%d = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);", tab, val, i, tmp, tmp);
+				fprintf(g_fp, "\n%scJSON * %s_arr%d = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);", tab, val, i, tmp, tmp);
 			}
 			else
 			{
-				printf("\n%scJSON * %s_arr%d = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);", tab, val, i, tmp, tmp);
+				fprintf(g_fp, "\n%scJSON * %s_arr%d = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);", tab, val, i, tmp, tmp);
 			}
 		}
 		else
 		{
 
-			printf("\n%scJSON *%s_arr%d = cJSON_CreateArray();\n", tab, val, i);
-			printf("\n%sfor (int %s_i%d = 0; %s_i%d < st->%s->_length; %s_i%d++) {", tab, val, i, val, i, tmp, val, i);
+			fprintf(g_fp, "\n%scJSON *%s_arr%d = cJSON_CreateArray();\n", tab, val, i);
+			fprintf(g_fp, "\n%sfor (int %s_i%d = 0; %s_i%d < st->%s->_length; %s_i%d++) {", tab, val, i, val, i, tmp, val, i);
 			size = snprintf(where, 128, "->_buffer[%s_i%d]", val, i);
 			where = where + size;
 
@@ -257,12 +257,12 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 
 	while (*times > 0)
 	{
-		printf("\n%scJSON_AddItemToArray(%s_arr%d, %s_arr%d);", tab, val, (*times) - 1, val, (*times));
+		fprintf(g_fp, "\n%scJSON_AddItemToArray(%s_arr%d, %s_arr%d);", tab, val, (*times) - 1, val, (*times));
 		tab[(*times)--] = '\0';
-		printf("\n%s}", tab);
+		fprintf(g_fp, "\n%s}", tab);
 	}
 
-	printf("\n%scJSON_AddItemToObject(obj, \"%s\", %s_arr0);\n", tab, val, val);
+	fprintf(g_fp, "\n%scJSON_AddItemToObject(obj, \"%s\", %s_arr0);\n", tab, val, val);
 }
 
 void cJSON_Add(cJSON *jso)
@@ -272,19 +272,19 @@ void cJSON_Add(cJSON *jso)
 
 	if (0 == strcmp(key, "BOOLEAN"))
 	{
-		printf("\tcJSON_AddBoolToObject(obj, \"%s\", st->%s);\n", val, val);
+		fprintf(g_fp, "\tcJSON_AddBoolToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strcmp(key, "NUMBER"))
 	{
-		printf("\tcJSON_AddNumberToObject(obj, \"%s\", st->%s);\n", val, val);
+		fprintf(g_fp, "\tcJSON_AddNumberToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strcmp(key, "STRING"))
 	{
-		printf("\tcJSON_AddStringToObject(obj, \"%s\", st->%s);\n", val, val);
+		fprintf(g_fp, "\tcJSON_AddStringToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strncmp(key, "STRING_", strlen("STRING_")))
 	{
-		printf("\tcJSON_AddStringToObject(obj, \"%s\", st->%s);\n", val, val);
+		fprintf(g_fp, "\tcJSON_AddStringToObject(obj, \"%s\", st->%s);\n", val, val);
 	}
 	else if (0 == strncmp(key, "ARRAY", strlen("ARRAY")))
 	{
@@ -297,7 +297,7 @@ void cJSON_Add(cJSON *jso)
 	}
 	else
 	{
-		printf(ser_func_call, val, key, val);
+		fprintf(g_fp, ser_func_call, val, key, val);
 		// log_err("Unsupport now: %s", key);
 	}
 	return;
@@ -311,11 +311,11 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 	tab[times] = '\t';
 	static bool first_time = true;
 
-	first_time ? printf("%sint i%d = 0;\n", tab, 0) : printf("%si%d = 0;\n", tab, 0);
+	first_time ? fprintf(g_fp, "%sint i%d = 0;\n", tab, 0) : fprintf(g_fp, "%si%d = 0;\n", tab, 0);
 
 	first_time = false;
-	printf("%scJSON *%s%d = NULL;\n", tab, val, times);
-	printf("%scJSON_ArrayForEach(item, %s%d) {\n", tab, val, times);
+	fprintf(g_fp, "%scJSON *%s%d = NULL;\n", tab, val, times);
+	fprintf(g_fp, "%scJSON_ArrayForEach(item, %s%d) {\n", tab, val, times);
 	tab[++times] = '\t';
 
 	if (strchr(p, '_'))
@@ -335,15 +335,15 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		}
 		if (0 == strncmp(type, "string", strlen("string")))
 		{
-			printf("%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
+			fprintf(g_fp, "%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
 		}
 		else if (0 == strncmp(type, "string_", strlen("string_")))
 		{
-			printf("%s%s = strcpy(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
+			fprintf(g_fp, "%s%s = strcpy(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
 		}
 		else
 		{
-			printf("%s%s = %s%d->value%s;\n", tab, tmp, val, times - 1, type);
+			fprintf(g_fp, "%s%s = %s%d->value%s;\n", tab, tmp, val, times - 1, type);
 		}
 		tab[times--] = '\0';
 	}
@@ -354,9 +354,9 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		*p = '\0';
 		int num = atoi(p_b);
 
-		printf("%sint i%d = 0;\n", tab, times);
-		printf("%scJSON *%s%d = NULL;\n", tab, val, times);
-		printf("%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
+		fprintf(g_fp, "%sint i%d = 0;\n", tab, times);
+		fprintf(g_fp, "%scJSON *%s%d = NULL;\n", tab, val, times);
+		fprintf(g_fp, "%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
 		*p++ = '_';
 		p_b = p;
 
@@ -374,15 +374,15 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 					where = where + size;
 				}
 
-				printf("%s\tstrcpy(%s, %s%d->valuestring);\n", tab, tmp, val, times);
+				fprintf(g_fp, "%s\tstrcpy(%s, %s%d->valuestring);\n", tab, tmp, val, times);
 			}
 			else
 			{
 
 				tab[++times] = '\t';
-				printf("%sint i%d = 0;\n", tab, times);
-				printf("%scJSON *%s%d = NULL;\n", tab, val, times);
-				printf("%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
+				fprintf(g_fp, "%sint i%d = 0;\n", tab, times);
+				fprintf(g_fp, "%scJSON *%s%d = NULL;\n", tab, val, times);
+				fprintf(g_fp, "%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
 				*p++ = '_';
 				p_b = p;
 
@@ -396,11 +396,11 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 				}
 				if (0 == strncmp(type, "string", strlen("string")))
 				{
-					printf("%s\t%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
+					fprintf(g_fp, "%s\t%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
 				}
 				else
 				{
-					printf("%s\t%s = %s%d->value%s;\n", tab, tmp, val, times, type);
+					fprintf(g_fp, "%s\t%s = %s%d->value%s;\n", tab, tmp, val, times, type);
 				}
 			}
 			break;
@@ -412,11 +412,11 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 	int i = 0;
 	while (times >= 0)
 	{
-		printf("%s\ti%d++;\n", tab, times);
-		printf("%s}\n", tab);
+		fprintf(g_fp, "%s\ti%d++;\n", tab, times);
+		fprintf(g_fp, "%s}\n", tab);
 		tab[times--] = '\0';
 	}
-	printf("\n");
+	fprintf(g_fp, "\n");
 }
 
 void cJSON_GetArray(char *key, char *val)
@@ -425,7 +425,7 @@ void cJSON_GetArray(char *key, char *val)
 	char *p = key + strlen("ARRAY_");
 	char *ret = NULL;
 
-	printf("\n\t// %s\n", key);
+	fprintf(g_fp, "\n\t// %s\n", key);
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 
@@ -462,7 +462,7 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	char *p = key;
 	char *ret = NULL;
 
-	printf("\n%s// %s\n", tab, key);
+	fprintf(g_fp, "\n%s// %s\n", tab, key);
 
 	// sequence<double> sl;
 	int i = 0;
@@ -477,8 +477,8 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 		i++;
 	}
 
-	printf("%s;", tmp);
-	printf("\n%s%s_array0 = item;\n", tab, val);
+	fprintf(g_fp, "%s;", tmp);
+	fprintf(g_fp, "\n%s%s_array0 = item;\n", tab, val);
 
 	i = 0;
 	p = key;
@@ -487,11 +487,11 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	where = tmp + size;
 	while ((p = strstr(p, "sequence")))
 	{
-		printf("\n%ssize_t %s_sz%d = cJSON_GetArraySize(%s_array%d);", tab, val, i, val, i);
-		printf("\n%sst->%s = dds_%s__alloc();", tab, tmp, p);
-		printf("\n%sst->%s->_buffer = dds_%s_allocbuf(%s_sz%d);", tab, tmp, p, val, i);
-		printf("\n%sint %s_i%d = 0;", tab, val, i);
-		printf("\n%scJSON_ArrayForEach(%s_array%d, %s_array%d) {", tab, val, i + 1, val, i);
+		fprintf(g_fp, "\n%ssize_t %s_sz%d = cJSON_GetArraySize(%s_array%d);", tab, val, i, val, i);
+		fprintf(g_fp, "\n%sst->%s = dds_%s__alloc();", tab, tmp, p);
+		fprintf(g_fp, "\n%sst->%s->_buffer = dds_%s_allocbuf(%s_sz%d);", tab, tmp, p, val, i);
+		fprintf(g_fp, "\n%sint %s_i%d = 0;", tab, val, i);
+		fprintf(g_fp, "\n%scJSON_ArrayForEach(%s_array%d, %s_array%d) {", tab, val, i + 1, val, i);
 
 		size = snprintf(where, 128, "->_buffer[%s_i%d]", val, i);
 		where = where + size;
@@ -519,22 +519,22 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 
 	if (0 == strncmp(p_b, "string_", strlen("string_")))
 	{
-		printf("strcpy(%s, cJSON_GetStringValue(%s_array%d));\n", tmp, val, i);
+		fprintf(g_fp, "strcpy(%s, cJSON_GetStringValue(%s_array%d));\n", tmp, val, i);
 	}
 	else if (0 == strncmp(p_b, "string", strlen("string")))
 	{
-		printf("%s = strdup(cJSON_GetStringValue(%s_array%d));\n", tmp, val, i);
+		fprintf(g_fp, "%s = strdup(cJSON_GetStringValue(%s_array%d));\n", tmp, val, i);
 	}
 	else
 	{
-		printf("%s = cJSON_GetNumberValue(%s_array%d);\n", tmp, val, i);
+		fprintf(g_fp, "%s = cJSON_GetNumberValue(%s_array%d);\n", tmp, val, i);
 	}
 
 	while (*times > 0)
 	{
-		printf("%s%s_i%d++;\n", tab, val, (*times) - 1);
+		fprintf(g_fp, "%s%s_i%d++;\n", tab, val, (*times) - 1);
 		tab[(*times)--] = '\0';
-		printf("%s}\n", tab);
+		fprintf(g_fp, "%s}\n", tab);
 	}
 }
 
@@ -575,7 +575,7 @@ void cJSON_Get(cJSON *item)
 		int times = 0;
 		cJSON_GetSequence(type, name, &times);
 
-		printf("\n");
+		fprintf(g_fp, "\n");
 		return;
 	}
 	else if (0 == strcmp(type, "STRING"))
@@ -593,12 +593,11 @@ void cJSON_Get(cJSON *item)
 		// return;
 	}
 
-	puts(ret);
+	fprintf(g_fp, "%s\n", ret);
 	return;
 }
 
-
-int idl_serial_generator_to_json(cJSON *jso)
+int idl_struct_to_json(cJSON *jso)
 {
 	cJSON *arrs = jso;
 	cJSON *arr = NULL;
@@ -613,15 +612,15 @@ int idl_serial_generator_to_json(cJSON *jso)
 			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
 			{
 				char *num_type = eles->string + strlen(g_num);
-				printf(ser_num_func, eles->valuestring, num_type);
+				fprintf(g_fp, ser_num_func, eles->valuestring, num_type);
 			}
 			else if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
-				printf(ser_num_func, eles->valuestring, eles->valuestring);
+				fprintf(g_fp, ser_num_func, eles->valuestring, eles->valuestring);
 			}
 			else if (0 == strncmp(eles->string, g_str, strlen(g_str)))
 			{
-				printf(ser_str_func, eles->valuestring, eles->valuestring);
+				fprintf(g_fp, ser_str_func, eles->valuestring, eles->valuestring);
 			}
 			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
 			{
@@ -638,21 +637,21 @@ int idl_serial_generator_to_json(cJSON *jso)
 				{
 					if (0 == strcmp("long", num_type))
 					{
-						printf(ser_arr_func, val_name, num_type, "Int", eles->valueint);
+						fprintf(g_fp, ser_arr_func, val_name, num_type, "Int", eles->valueint);
 					}
 					else
 					{
-						printf(ser_arr_func, val_name, num_type, "Double", eles->valueint);
+						fprintf(g_fp, ser_arr_func, val_name, num_type, "Double", eles->valueint);
 					}
 				}
 				else
 				{
-					printf(ser_arr_func, val_name, num_type, "Int", eles->valueint);
+					fprintf(g_fp, ser_arr_func, val_name, num_type, "Int", eles->valueint);
 				}
 			}
 			else
 			{
-				printf(ser_func_head, eles->string, eles->string);
+				fprintf(g_fp, ser_func_head, eles->string, eles->string);
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -662,7 +661,7 @@ int idl_serial_generator_to_json(cJSON *jso)
 					}
 				}
 
-				puts(ser_func_tail);
+				fprintf(g_fp, "%s\n", ser_func_tail);
 			}
 		}
 	}
@@ -670,7 +669,7 @@ int idl_serial_generator_to_json(cJSON *jso)
 	return 0;
 }
 
-int idl_serial_generator_to_struct(cJSON *jso)
+int idl_json_to_struct(cJSON *jso)
 {
 
 	cJSON *arrs = jso;
@@ -687,37 +686,37 @@ int idl_serial_generator_to_struct(cJSON *jso)
 			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
 			{
 				char *num_type = eles->string + strlen(g_num);
-				printf(deser_num_func, num_type, eles->valuestring);
+				fprintf(g_fp, deser_num_func, num_type, eles->valuestring);
 			}
 			else if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
-				printf(deser_num_func, eles->valuestring, eles->valuestring);
+				fprintf(g_fp, deser_num_func, eles->valuestring, eles->valuestring);
 			}
 			else if (0 == strncmp(eles->string, g_str, strlen(g_str)))
 			{
-				printf(deser_str_func, "string", eles->valuestring);
+				fprintf(g_fp, deser_str_func, "string", eles->valuestring);
 			}
 			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
 			{
 				char *num_type = eles->string + strlen(g_arr);
 				char *val_name = strlen(num_type) + num_type + 1;
-				printf(deser_arr_func, num_type, val_name, num_type, num_type, eles->valueint, num_type);
+				fprintf(g_fp, deser_arr_func, num_type, val_name, num_type, num_type, eles->valueint, num_type);
 			}
 			else
 			{
-				printf(deser_func_head, eles->string, eles->string, eles->string, eles->string);
+				fprintf(g_fp, deser_func_head, eles->string, eles->string, eles->string, eles->string);
 
 				cJSON_ArrayForEach(ele, eles)
 				{
 					cJSON_ArrayForEach(e, ele)
 					{
 
-						printf("\titem = cJSON_GetObjectItem(obj, \"%s\");\n", e->valuestring);
+						fprintf(g_fp, "\titem = cJSON_GetObjectItem(obj, \"%s\");\n", e->valuestring);
 						cJSON_Get(e);
 					}
 				}
 
-				puts(deser_func_tail);
+				fprintf(g_fp, "%s\n", deser_func_tail);
 			}
 		}
 	}
@@ -725,12 +724,12 @@ int idl_serial_generator_to_struct(cJSON *jso)
 	return 0;
 }
 
-int idl_serial_generator(const char *file)
+int idl_serial_generator(const char *file, const char *out)
 {
 	int rv = 0;
 	if (!(yyin = fopen(file, "r")))
 	{
-		perror((file));
+		fprintf(stderr, "Failed to open %s: %s\n", file, strerror(errno));
 		return -1;
 	}
 
@@ -742,10 +741,17 @@ int idl_serial_generator(const char *file)
 		return -1;
 	}
 
-	puts(cJSON_PrintUnformatted(jso));
+	char *str = cJSON_PrintUnformatted(jso);
+	log_info("%s", str);
 
-	idl_serial_generator_to_json(jso);
-	idl_serial_generator_to_struct(jso);
+
+	g_fp = fopen(out, "w");
+
+	idl_struct_to_json(jso);
+	idl_json_to_struct(jso);
+
+	cJSON_free(str);
+	fclose(g_fp);
 
 	return 0;
 }
