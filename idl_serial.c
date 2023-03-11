@@ -29,39 +29,6 @@ static char deser_num_func[] =
 	"\n\treturn cJSON_GetNumberValue(obj);\n"
 	"\n}\n\n";
 
-static char ser_str_func[] =
-	"\ncJSON *dds_to_mqtt_%s_convert(char *str)"
-	"\n{\n"
-	"\n\tcJSON *obj = cJSON_CreateObject();"
-	"\n\tcJSON_AddStringToObject(obj, \"%s\", str);"
-	"\n\treturn obj;\n"
-	"\n}\n";
-
-static char deser_str_func[] =
-	"\nchar *mqtt_to_dds_%s_convert(cJSON *obj)"
-	"\n{\n"
-	"\n\tcJSON *item = cJSON_GetObjectItem(obj, \"%s\");"
-	"\n\treturn item->valuestring;"
-	"\n}\n\n";
-
-static char ser_arr_func[] =
-	"\ncJSON *dds_to_mqtt_%s_convert(%s *arr)"
-	"\n{\n"
-	"\n\treturn cJSON_Create%sArray((const double *)arr, %d);\n"
-	"\n}\n";
-
-static char deser_arr_func[] =
-	"\n%s *mqtt_to_dds_%s_convert(cJSON *obj)"
-	"\n{"
-	"\n\t%s *arr = (%s*) malloc(%d*sizeof(%s));"
-	"\n\tcJSON *item = NULL;"
-	"\n\tint i = 0;"
-	"\n\tcJSON_ArrayForEach(item, obj) {"
-	"\n\t\tarr[i++] = item->valuedouble;"
-	"\n\t}"
-	"\n\treturn arr;\n"
-	"\n}\n\n";
-
 static char ser_func_head[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *st)"
 	"\n{\n"
@@ -624,45 +591,9 @@ int idl_struct_to_json(cJSON *jso)
 	{
 		cJSON_ArrayForEach(eles, arr)
 		{
-			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
-			{
-				char *num_type = eles->string + strlen(g_num);
-				fprintf(g_fp, ser_num_func, eles->valuestring, num_type);
-			}
-			else if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
+			if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
 				fprintf(g_fp, ser_num_func, eles->valuestring, eles->valuestring);
-			}
-			else if (0 == strncmp(eles->string, g_str, strlen(g_str)))
-			{
-				fprintf(g_fp, ser_str_func, eles->valuestring, eles->valuestring);
-			}
-			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
-			{
-				char *num_type = eles->string + strlen(g_arr);
-				char *val_name = strchr(num_type, '_');
-				*val_name++ = '\0';
-
-				char u32[] = "uint32";
-				char dou[] = "double";
-				char flo[] = "float";
-				char i64[] = "int64";
-
-				if (NULL != strstr(num_type, "64") || NULL != strstr(num_type, "long") || NULL != strstr(num_type, u32) || NULL != strstr(num_type, dou) || NULL != strstr(num_type, flo))
-				{
-					if (0 == strcmp("long", num_type))
-					{
-						fprintf(g_fp, ser_arr_func, val_name, num_type, "Int", eles->valueint);
-					}
-					else
-					{
-						fprintf(g_fp, ser_arr_func, val_name, num_type, "Double", eles->valueint);
-					}
-				}
-				else
-				{
-					fprintf(g_fp, ser_arr_func, val_name, num_type, "Int", eles->valueint);
-				}
 			}
 			else
 			{
@@ -698,24 +629,9 @@ int idl_json_to_struct(cJSON *jso)
 		cJSON_ArrayForEach(eles, arr)
 		{
 
-			if (0 == strncmp(eles->string, g_num, strlen(g_num)))
-			{
-				char *num_type = eles->string + strlen(g_num);
-				fprintf(g_fp, deser_num_func, num_type, eles->valuestring);
-			}
-			else if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
+			if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
 				fprintf(g_fp, deser_num_func, eles->valuestring, eles->valuestring);
-			}
-			else if (0 == strncmp(eles->string, g_str, strlen(g_str)))
-			{
-				fprintf(g_fp, deser_str_func, "string", eles->valuestring);
-			}
-			else if (0 == strncmp(eles->string, g_arr, strlen(g_arr)))
-			{
-				char *num_type = eles->string + strlen(g_arr);
-				char *val_name = strlen(num_type) + num_type + 1;
-				fprintf(g_fp, deser_arr_func, num_type, val_name, num_type, num_type, eles->valueint, num_type);
 			}
 			else
 			{
@@ -770,7 +686,7 @@ int idl_serial_generator(const char *file, const char *out)
 	g_fp = fopen(out, "w");
 
 	idl_append_header();
-	// idl_struct_to_json(jso);
+	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
 
 	cJSON_free(str);

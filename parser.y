@@ -69,64 +69,11 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddItemToObject($$, $2, $4);
         }
-        | NUMBER VARIABLE SEMIC
-        {
-                log_info("INTEGER VARIABLE");
-                $$ = cJSON_CreateObject();
-                char tmp[32] = {0};
-                snprintf(tmp, 32, "NUMBER%s", $1);
-                cJSON_AddStringToObject($$, tmp, $2);
-        }
-        | STRING VARIABLE SEMIC
-        {
-                log_info("STRING VARIABLE");
-                $$ = cJSON_CreateObject();
-                cJSON_AddStringToObject($$, "STRING", $2);
-        }
-        | STRING LBRAC INTEGER RBRAC VARIABLE SEMIC
-        {
-                log_info("STRING LBRAC INTEGER RBRAC VARIABLE SEMIC");
-                $$ = cJSON_CreateObject();
-                cJSON_AddStringToObject($$, "STRING", $5);
-        }
-        | SEQUENCE LBRAC data_type RBRAC VARIABLE SEMIC
-        {
-                log_info("SEQUENCE LBRAC %s RBRAC VARIABLE SEMIC", $3->data);
-                $$ = cJSON_CreateObject();
-                char tmp[64] = {0};
-                snprintf(tmp, 64, "SEQUENCE%s", $3->data);
-                cJSON_AddStringToObject($$, tmp, $5);
-        }
-        | SEQUENCE LBRAC data_type COMMA INTEGER RBRAC VARIABLE SEMIC
-        {
-                log_info("SEQUENCE LBRAC %s COMMA INTEGER RBRAC VARIABLE SEMIC", $3->data);
-                $$ = cJSON_CreateObject();
-                char tmp[64] = {0};
-                snprintf(tmp, 64, "SEQUENCE%s_%s", $3->data, $7);
-                cJSON_AddNumberToObject($$, tmp, $5);
-        }
-
         | ENUM VARIABLE LCURLY members RCURLY SEMIC
         {
                 log_info("ENUM VARIABLE LCURLY members RCURLY");
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, "ENUM", $2);
-        }
-        | NUMBER VARIABLE LMBRAC INTEGER RMBRAC SEMIC
-        {
-                log_info("NUMBER VARIABLE LMBRAC INTEGER RMBRAC");
-                $$ = cJSON_CreateObject();
-                char tmp[64] = {0};
-                snprintf(tmp, 64, "ARRAY%s_%s", $1, $2);
-                cJSON_AddNumberToObject($$, tmp, $4);
-        }
-        | BOOLEAN VARIABLE LMBRAC INTEGER RMBRAC SEMIC
-        {
-                log_info("BOOLEAN VARIABLE LMBRAC INTEGER RMBRAC");
-                $$ = cJSON_CreateObject();
-                char tmp[64] = {0};
-                snprintf(tmp, 64, "ARRAY%s_%s", "bool", $2);
-                cJSON_AddNumberToObject($$, tmp, $4);
         }
         | VARIABLE VARIABLE LMBRAC INTEGER RMBRAC SEMIC
         {
@@ -135,7 +82,6 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 char tmp[64] = {0};
                 snprintf(tmp, 64, "ARRAY%s%s", $1, $2);
                 cJSON_AddNumberToObject($$, tmp, $4);
-
         }
         ;
 
