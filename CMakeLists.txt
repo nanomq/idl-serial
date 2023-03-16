@@ -30,6 +30,6 @@ add_library(idl-serial SHARED "${LEXER_OUT}" "${PARSER_OUT}" "${SRC}")
 target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(idl-serial-code-gen ${CMAKE_CURRENT_SOURCE_DIR}/test.c)
+add_executable(idl-serial-code-gen ${CMAKE_CURRENT_SOURCE_DIR}/main.c)
 target_include_directories(idl-serial-code-gen PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(idl-serial-code-gen PRIVATE idl-serial)
