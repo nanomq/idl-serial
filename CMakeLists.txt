@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.20)
 
 project(idl-serial VERSION 1.0 LANGUAGES C)
 
 set(SRC_DIR "src")
 set(PARSER_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-find_package(FLEX 2.6 REQUIRED)
-find_package(BISON 3.0 REQUIRED)
+find_package(FLEX REQUIRED)
+find_package(BISON REQUIRED)
 
 set(LEXER_OUT "${PARSER_DIR}/scanner.c")
 set(PARSER_OUT "${PARSER_DIR}/parser.c")
@@ -30,6 +30,6 @@ add_library(idl-serial SHARED "${LEXER_OUT}" "${PARSER_OUT}" "${SRC}")
 target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-add_executable(idl-serial-code-gen ${CMAKE_CURRENT_SOURCE_DIR}/test.c)
+add_executable(idl-serial-code-gen ${CMAKE_CURRENT_SOURCE_DIR}/main.c)
 target_include_directories(idl-serial-code-gen PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(idl-serial-code-gen PRIVATE idl-serial)
