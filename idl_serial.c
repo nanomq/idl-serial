@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 extern FILE *yyin;
+extern int yyparse (struct cJSON **jso);
 
 static char g_num[] = "NUMBER";
 static char g_arr[] = "ARRAY";
@@ -77,7 +78,7 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
 	}
 
-	while (p = strchr(p, '_'))
+	while (NULL != (p = strchr(p, '_')))
 	{
 
 		*p = '\0';
@@ -315,7 +316,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		tab[times--] = '\0';
 	}
 
-	while (p = strchr(p, '_'))
+	while (NULL != (p = strchr(p, '_')))
 	{
 
 		*p = '\0';
@@ -660,6 +661,7 @@ int idl_append_header(void)
 {
 	fprintf(g_fp, "#include \"cJSON.h\"\n");
 	fprintf(g_fp, "#include \"dds_type.h\"\n");
+	return 0;
 }
 
 int idl_serial_generator(const char *file, const char *out)
