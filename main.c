@@ -6,7 +6,16 @@ int main(int argc, char *argv[])
 {
     if (argc > 1)
     {
-        int ret = idl_serial_generator(argv[1], "idl_convert.c");
+        char *c_file;
+        if (argc >= 2)
+        {
+            c_file = argv[2];
+        }
+        else
+        {
+            c_file = "idl_convert.c";
+        }
+        int ret = idl_serial_generator(argv[1], c_file);
         if (0 != ret)
         {
             fprintf(stderr, "Parse idl failed.\n");
@@ -14,7 +23,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        fprintf(stderr, "Usage: idl-serial <your idl file>\n");
+        fprintf(stderr, "Usage: idl-serial <your idl file> [output c file]\n");
     }
 
     return 0;
