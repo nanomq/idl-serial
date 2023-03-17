@@ -17,6 +17,7 @@ static char g_arr[] = "ARRAY";
 static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
+static FILE *g_hfp = NULL;
 
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *num)"
@@ -44,7 +45,7 @@ static char ser_func_tail[] =
 static char deser_func_head[] =
 	"\n%s *mqtt_to_dds_%s_convert(cJSON *obj)"
 	"\n{"
-	"\n\t%s *st = (%s*) malloc(sizeof(*st));"
+	"\n\t%s *st = (%s*) calloc(1, sizeof(*st));"
 	"\n\tcJSON *item = NULL;\n";
 
 static char deser_func_tail[] =
@@ -588,16 +589,21 @@ int idl_struct_to_json(cJSON *jso)
 	cJSON *ele = NULL;
 	cJSON *e = NULL;
 
+	char ser_func_header[] = "extern cJSON *dds_to_mqtt_%s_convert(%s *st);\n";
+
 	cJSON_ArrayForEach(arr, arrs)
 	{
 		cJSON_ArrayForEach(eles, arr)
 		{
+
 			if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
+				fprintf(g_hfp, ser_func_header, eles->valuestring, eles->valuestring);
 				fprintf(g_fp, ser_num_func, eles->valuestring, eles->valuestring);
 			}
 			else
 			{
+				fprintf(g_hfp, ser_func_header, eles->string, eles->string);
 				fprintf(g_fp, ser_func_head, eles->string, eles->string);
 
 				cJSON_ArrayForEach(ele, eles)
@@ -625,6 +631,8 @@ int idl_json_to_struct(cJSON *jso)
 	cJSON *ele = NULL;
 	cJSON *e = NULL;
 
+
+	char deser_func_header[] = "extern %s *mqtt_to_dds_%s_convert(cJSON *obj);\n";
 	cJSON_ArrayForEach(arr, arrs)
 	{
 		cJSON_ArrayForEach(eles, arr)
@@ -632,10 +640,12 @@ int idl_json_to_struct(cJSON *jso)
 
 			if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
 			{
+				fprintf(g_hfp, deser_func_header, eles->valuestring, eles->valuestring);
 				fprintf(g_fp, deser_num_func, eles->valuestring, eles->valuestring);
 			}
 			else
 			{
+				fprintf(g_hfp, deser_func_header, eles->string, eles->string);
 				fprintf(g_fp, deser_func_head, eles->string, eles->string, eles->string, eles->string);
 
 				cJSON_ArrayForEach(ele, eles)
@@ -657,12 +667,31 @@ int idl_json_to_struct(cJSON *jso)
 }
 
 
-int idl_append_header(void)
+int idl_append_src_inc(const char *src, char *header)
 {
-	fprintf(g_fp, "#include \"cJSON.h\"\n");
-	fprintf(g_fp, "#include \"dds_type.h\"\n");
+	fprintf(g_fp, "#include \"%s\"\n", header);
+	fprintf(g_fp, "#include <stdio.h>\n");
+	fprintf(g_fp, "#include <string.h>\n");
+	fprintf(g_fp, "#include <stdlib.h>\n");
 	return 0;
 }
+
+int idl_append_header_inc()
+{
+	fprintf(g_hfp, "#ifndef __IDL_CONVERT_H__\n");
+	fprintf(g_hfp, "#define __IDL_CONVERT_H__\n\n");
+	fprintf(g_hfp, "#include \"nng/supplemental/nanolib/cJSON.h\"\n");
+	fprintf(g_hfp, "#include \"dds_type.h\"\n\n");
+	return 0;
+}
+
+void idl_get_header(char *src, char *header)
+{
+	char name[32] = { 0 };
+	sscanf(src, "%[^.]", name);
+	snprintf(header, 64, "%s.h", name);
+}
+
 
 int idl_serial_generator(const char *file, const char *out)
 {
@@ -687,13 +716,21 @@ int idl_serial_generator(const char *file, const char *out)
 
 	g_fp = fopen(out, "w");
 
-	idl_append_header();
+	char header[64] = { 0 };
+	idl_get_header(out, header);
+	idl_append_src_inc(out, header);
+
+	g_hfp = fopen(header, "w");
+	idl_append_header_inc();
+
 	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
+	fprintf(g_hfp, "\n#endif\n");
 
 	cJSON_free(str);
 	cJSON_Delete(jso);
 	fclose(g_fp);
+	fclose(g_hfp);
 
 	return 0;
 }
