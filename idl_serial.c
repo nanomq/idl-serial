@@ -10,7 +10,7 @@
 #include <stdbool.h>
 
 extern FILE *yyin;
-extern int yyparse (struct cJSON **jso);
+extern int yyparse(struct cJSON **jso);
 
 static char g_num[] = "NUMBER";
 static char g_arr[] = "ARRAY";
@@ -272,8 +272,19 @@ void cJSON_Add(cJSON *jso)
 	return;
 }
 
+bool is_convert(char *type)
+{
+	if (strstr(type, "int"))
+	{
+		return true;
+	}
+
+	return false;
+}
+
 void cJSON_GetArrayCommon(char *p, char *val, char *type)
 {
+	;
 	char *p_b = p;
 	int times = 0;
 	char tab[16] = {0};
@@ -312,7 +323,13 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		}
 		else
 		{
-			fprintf(g_fp, "%s%s = %s%d->value%s;\n", tab, tmp, val, times - 1, type);
+			char t[16] = {0};
+			if (is_convert(type))
+			{
+				sprintf(t, "%s_t", type);
+			}
+
+			fprintf(g_fp, "%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, t, val, times - 1);
 		}
 		tab[times--] = '\0';
 	}
@@ -369,7 +386,12 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 				}
 				else
 				{
-					fprintf(g_fp, "%s\t%s = %s%d->value%s;\n", tab, tmp, val, times, type);
+					char t[16] = {0};
+					if (is_convert(type))
+					{
+						sprintf(t, "%s_t", type);
+					}
+					fprintf(g_fp, "%s\t%s = (%s) %s%d->valuedouble;\n", tab, tmp, t, val, times);
 				}
 			}
 			break;
@@ -398,14 +420,16 @@ void cJSON_GetArray(char *key, char *val)
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 		p += strlen("BOOLEAN_bool_");
-		cJSON_GetArrayCommon(p, val, "int");
+		cJSON_GetArrayCommon(p, val, "bool");
 	}
 	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
 	{
-		p += strlen("NUMBER_");
-		p = strchr(p, '_') + 1;
+		char *p_b = p + strlen("NUMBER_");
+		p = strchr(p_b, '_');
+		*p = '\0';
+		p++;
 
-		cJSON_GetArrayCommon(p, val, "double");
+		cJSON_GetArrayCommon(p, val, p_b);
 	}
 	else if (0 == strncmp(p, "STRING_T_", strlen("STRING_T_")))
 	{
@@ -423,17 +447,17 @@ void cJSON_GetArray(char *key, char *val)
 void clean_data(char *p)
 {
 	char *p_b = strrchr(p, '_');
-	if (atoi(p_b+1)) {
+	if (atoi(p_b + 1))
+	{
 		*p_b = '\0';
 	}
 	p_b = p;
 
-	while ((p_b = strchr(p_b, ' '))) {
+	while ((p_b = strchr(p_b, ' ')))
+	{
 		*p_b = '_';
-	} 
-
+	}
 }
-
 
 void cJSON_GetSequence(char *key, char *val, int *times)
 {
@@ -631,7 +655,6 @@ int idl_json_to_struct(cJSON *jso)
 	cJSON *ele = NULL;
 	cJSON *e = NULL;
 
-
 	char deser_func_header[] = "extern %s *mqtt_to_dds_%s_convert(cJSON *obj);\n";
 	cJSON_ArrayForEach(arr, arrs)
 	{
@@ -666,7 +689,6 @@ int idl_json_to_struct(cJSON *jso)
 	return 0;
 }
 
-
 int idl_append_src_inc(const char *src, char *header)
 {
 	fprintf(g_fp, "#include \"%s\"\n", header);
@@ -687,11 +709,10 @@ int idl_append_header_inc()
 
 void idl_get_header(char *src, char *header)
 {
-	char name[32] = { 0 };
+	char name[32] = {0};
 	sscanf(src, "%[^.]", name);
 	snprintf(header, 64, "%s.h", name);
 }
-
 
 int idl_serial_generator(const char *file, const char *out)
 {
@@ -713,10 +734,9 @@ int idl_serial_generator(const char *file, const char *out)
 	char *str = cJSON_PrintUnformatted(jso);
 	log_info("%s", str);
 
-
 	g_fp = fopen(out, "w");
 
-	char header[64] = { 0 };
+	char header[64] = {0};
 	idl_get_header(out, header);
 	idl_append_src_inc(out, header);
 
