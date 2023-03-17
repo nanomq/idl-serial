@@ -17,6 +17,7 @@ static char g_arr[] = "ARRAY";
 static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
+static FILE *g_hfp = NULL;
 
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *num)"
@@ -657,10 +658,15 @@ int idl_json_to_struct(cJSON *jso)
 }
 
 
-int idl_append_header(void)
+int idl_append_header(const char *out, char *header)
 {
-	fprintf(g_fp, "#include \"cJSON.h\"\n");
-	fprintf(g_fp, "#include \"dds_type.h\"\n");
+	char name[32] = { 0 };
+	sscanf(out, "%[^.]", name);
+	sprintf(header, "#include \"%s.h\"", name);
+	fprintf(g_fp, "%s\n", header);
+	fprintf(g_fp, "#include <stdio.h>\n");
+	fprintf(g_fp, "#include <string.h>\n");
+	fprintf(g_fp, "#include <stdlib.h>\n");
 	return 0;
 }
 
@@ -687,13 +693,17 @@ int idl_serial_generator(const char *file, const char *out)
 
 	g_fp = fopen(out, "w");
 
-	idl_append_header();
+	char header[32] = { 0 };
+	idl_append_header(out, header);
+	g_hfp = fopen(header, "w");
+
 	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
 
 	cJSON_free(str);
 	cJSON_Delete(jso);
 	fclose(g_fp);
+	fclose(g_hfp);
 
 	return 0;
 }
