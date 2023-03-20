@@ -54,10 +54,10 @@ static char deser_func_tail[] =
 	"\n}\n\n";
 
 static char ser_func_call[] =
-	"\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(st->%s));\n";
+	"\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(&st->%s));\n";
 
 static char deser_func_call[] =
-	"\n\tst->%s = mqtt_to_dds_%s_convert(item);\n";
+	"\n\tmqtt_to_dds_%s_convert(item, &st->%s);\n";
 
 
 typedef enum {
@@ -295,7 +295,6 @@ void cJSON_Add(cJSON *jso)
 	else
 	{
 		fprintf(g_fp, ser_func_call, val, key, val);
-		// log_err("Unsupport now: %s", key);
 	}
 	return;
 }
@@ -623,9 +622,7 @@ void cJSON_Get(cJSON *item)
 	}
 	else
 	{
-		snprintf(ret, 64, deser_func_call, name, type);
-		// log_err("Nonsupport now : %s", type);
-		// return;
+		snprintf(ret, 64, deser_func_call, type, name);
 	}
 
 	fprintf(g_fp, "%s\n", ret);
