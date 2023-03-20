@@ -18,6 +18,7 @@ static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
 static FILE *g_hfp = NULL;
+static bool first_time = true;
 
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *num)"
@@ -289,7 +290,6 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 	int times = 0;
 	char tab[16] = {0};
 	tab[times] = '\t';
-	static bool first_time = true;
 
 	first_time ? fprintf(g_fp, "%sint i%d = 0;\n", tab, 0) : fprintf(g_fp, "%si%d = 0;\n", tab, 0);
 
@@ -668,6 +668,7 @@ int idl_json_to_struct(cJSON *jso)
 			}
 			else
 			{
+				first_time = true;
 				fprintf(g_hfp, deser_func_header, eles->string, eles->string);
 				fprintf(g_fp, deser_func_head, eles->string, eles->string, eles->string, eles->string);
 
@@ -675,7 +676,6 @@ int idl_json_to_struct(cJSON *jso)
 				{
 					cJSON_ArrayForEach(e, ele)
 					{
-
 						fprintf(g_fp, "\titem = cJSON_GetObjectItem(obj, \"%s\");\n", e->valuestring);
 						cJSON_Get(e);
 					}
