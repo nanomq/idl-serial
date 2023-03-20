@@ -59,6 +59,34 @@ static char ser_func_call[] =
 static char deser_func_call[] =
 	"\n\tst->%s = mqtt_to_dds_%s_convert(item);\n";
 
+
+typedef enum {
+	arr_t,
+	obj_t
+} type;
+
+static void AddArrayCommonHelper(char *tab, char *val, int *times, int num, type t)
+{
+
+	fprintf(g_fp, "%scJSON *%s = cJSON_CreateArray();\n", tab, val);
+	switch (t)
+	{
+	case obj_t:
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		break;
+	case arr_t:
+		fprintf(g_fp, "%scJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, *times, val, *times + 1);
+		break;
+	default:
+		break;
+	}
+	fprintf(g_fp, "%sfor (int i = 0; (i < (size_t) %d); i++) {\n", tab, num);
+	tab[++(*times)] = '\t';
+	fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(st->message[i]);\n", tab);
+	fprintf(g_fp, "%scJSON_AddItemToArray(message, n);\n", tab);
+}
+
+
 void cJSON_AddArrayCommon(char *p, char *val, char *type)
 {
 	char *p_b = p;
@@ -76,8 +104,7 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 		int num = atoi(p);
 		char tmp[64];
 		size_t size = snprintf(tmp, 64, "st->%s", val);
-		fprintf(g_fp, "%scJSON *%s = cJSON_Create%sArray(%s, %d);\n", tab, val, type, tmp, num);
-		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		AddArrayCommonHelper(tab, val, &times, num, obj_t);
 	}
 
 	while (NULL != (p = strchr(p, '_')))
@@ -106,8 +133,8 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 				size = snprintf(where, 64, "[i%d]", i);
 				where = where + size;
 			}
-			fprintf(g_fp, "%s\tcJSON *%s%d = cJSON_Create%sArray(%s, %d);\n", tab, val, times + 1, type, tmp, num);
-			fprintf(g_fp, "%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
+
+			AddArrayCommonHelper(tab, val, &times, num, arr_t);
 		}
 
 		tab[++times] = '\t';
