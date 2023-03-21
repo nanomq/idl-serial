@@ -54,6 +54,7 @@ Variable                {Letter}[A-Za-z0-9_]*
 /* Annotations */
 Bool_type               true|TRUE|FALSE|false
 Representation_type     {WhiteSpace}?((XCDR[12])|XML){WhiteSpace}?
+Keylist                 {WhiteSpace}?keylist{WhiteSpace}?
 
 Key                     @key
 Bit_bound               @bit_bound\({Integer}\)
@@ -72,6 +73,7 @@ Must_understand         @must_understand(\({Bool_type}\))?
 Data_representation     @data_representation\((({Representation_type}\|)?)*{Representation_type}\)
 Topic                   @topic
 Default_nested          @default_nested(\({Bool_type}\))?
+Pragma_keylist          #pragma{Keylist}{Variable}
 
 
 %%
@@ -120,6 +122,7 @@ Default_nested          @default_nested(\({Bool_type}\))?
 {Data_representation}   { debug("Data_representation type: %s", yytext); }
 {Topic}                 { debug("Topic type: %s", yytext); }
 {Default_nested}        { debug("Default_nested type: %s", yytext); }
+{Pragma_keylist}        { debug("Pragma keylist type: %s", yytext); }
 {Optional}              { debug("Optional type"); }
 {External}              { debug("External type"); }
 
