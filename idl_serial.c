@@ -19,6 +19,8 @@ static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
 static FILE *g_hfp = NULL;
 static bool first_time = true;
+static char g_map[1024] = {0};
+static int g_map_cursor = 0;
 
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *enu)"
@@ -78,6 +80,17 @@ static char deser_func_call[] =
 	"\n\tif (rc != 0) {"
 	"\n\t\treturn rc;"
 	"\n\t}\n";
+
+static char map_format[] =
+	"\t{\n"
+	"\t\t\"%s\",\n"
+	"\t\t{\n"
+	"\t\t\t%s__alloc,\n"
+	"\t\t\t%s__free,\n"
+	"\t\t\tmqtt_to_dds_%s_convert,\n"
+	"\t\t\tdds_to_mqtt_%s_convert\n"
+	"\t\t}\n"
+	"\t},\n";
 
 typedef enum
 {
@@ -660,16 +673,20 @@ int idl_struct_to_json(cJSON *jso)
 	{
 		cJSON_ArrayForEach(eles, arr)
 		{
+			char *str = eles->string;
+			char *vstr = eles->valuestring;
 
-			if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
+			if (0 == strncmp(str, g_enu, strlen(g_enu)))
 			{
-				fprintf(g_hfp, ser_func_header, eles->valuestring, eles->valuestring);
-				fprintf(g_fp, ser_num_func, eles->valuestring, eles->valuestring);
+				fprintf(g_hfp, ser_func_header, vstr, vstr);
+				fprintf(g_fp, ser_num_func, vstr, vstr);
 			}
 			else
 			{
-				fprintf(g_hfp, ser_func_header, eles->string, eles->string);
-				fprintf(g_fp, ser_func_head, eles->string, eles->string);
+				fprintf(g_hfp, ser_func_header, str, str);
+				fprintf(g_fp, ser_func_head, str, str);
+				int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str);
+				g_map_cursor += size;
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -701,17 +718,19 @@ int idl_json_to_struct(cJSON *jso)
 	{
 		cJSON_ArrayForEach(eles, arr)
 		{
+			char *str = eles->string;
+			char *vstr = eles->valuestring;
 
-			if (0 == strncmp(eles->string, g_enu, strlen(g_enu)))
+			if (0 == strncmp(str, g_enu, strlen(g_enu)))
 			{
-				fprintf(g_hfp, deser_func_header, eles->valuestring, eles->valuestring);
-				fprintf(g_fp, deser_num_func, eles->valuestring, eles->valuestring);
+				fprintf(g_hfp, deser_func_header, vstr, vstr);
+				fprintf(g_fp, deser_num_func, vstr, vstr);
 			}
 			else
 			{
 				first_time = true;
-				fprintf(g_hfp, deser_func_header, eles->string, eles->string);
-				fprintf(g_fp, deser_func_head, eles->string, eles->string);
+				fprintf(g_hfp, deser_func_header, str, str);
+				fprintf(g_fp, deser_func_head, str, str);
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -805,9 +824,12 @@ int idl_serial_generator(const char *file, const char *out)
 	g_hfp = fopen(header, "w");
 	idl_append_header_inc();
 
+	g_map_cursor = sprintf(g_map, "extern dds_info_map dds_struct_info_map[] = {\n");
 	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
 	fprintf(g_hfp, "\n#endif\n");
+	sprintf(g_map + g_map_cursor, "};\n");
+	fprintf(g_fp, g_map);
 
 	cJSON_free(str);
 	cJSON_Delete(jso);
