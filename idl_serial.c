@@ -21,6 +21,7 @@ static FILE *g_hfp = NULL;
 static bool first_time = true;
 static char g_map[2048] = {0};
 static int g_map_cursor = 0;
+static int g_map_num = 0;
 
 static char ser_num_func[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *enu)"
@@ -753,6 +754,7 @@ int idl_json_to_struct(cJSON *jso)
 				fprintf(g_fp, deser_func_head, str, str);
 				int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
 				g_map_cursor += size;
+				g_map_num++;
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -856,7 +858,7 @@ int idl_serial_generator(const char *file, const char *out)
 
 	idl_json_to_struct(jso);
 
-	fprintf(g_hfp, "\nextern %s[];\n", map);
+	fprintf(g_hfp, "\nextern %s[%d];\n", map, g_map_num);
 	fprintf(g_hfp, "\n#endif\n");
 	sprintf(g_map + g_map_cursor, "};\n");
 	fprintf(g_fp, "%s", g_map);
