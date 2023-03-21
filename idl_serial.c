@@ -18,45 +18,93 @@ static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
 static FILE *g_hfp = NULL;
+static bool first_time = true;
 
 static char ser_num_func[] =
-	"\ncJSON *dds_to_mqtt_%s_convert(%s *num)"
+	"\ncJSON *dds_to_mqtt_%s_convert(%s *enu)"
 	"\n{\n"
-	"\n\treturn cJSON_CreateNumber(*num);\n"
+	"\n\tif (enu == NULL) {"
+	"\n\t\tDDS_FATAL(\"enu is NULL\\n\");"
+	"\n\t\treturn NULL;"
+	"\n\t}\n"
+	"\n\treturn cJSON_CreateNumber(*enu);\n"
 	"\n}\n";
 
 static char deser_num_func[] =
-	"\n%s mqtt_to_dds_%s_convert(cJSON *obj)"
+	"\nint mqtt_to_dds_%s_convert(cJSON *obj, %s *enu)"
 	"\n{\n"
-	"\n\treturn cJSON_GetNumberValue(obj);\n"
+	"\n\tif (obj == NULL || enu == NULL) {"
+	"\n\t\tDDS_FATAL(\"obj or enu is NULL\\n\");"
+	"\n\t\treturn -1;"
+	"\n\t}\n"
+	"\n\t*enu = cJSON_GetNumberValue(obj);\n"
+	"\n\treturn 0;\n"
 	"\n}\n\n";
 
 static char ser_func_head[] =
 	"\ncJSON *dds_to_mqtt_%s_convert(%s *st)"
 	"\n{\n"
-	"\n 	cJSON *obj = NULL;"
-	"\n 	/* Assemble cJSON* obj with *st. */"
-	"\n 	obj = cJSON_CreateObject();\n";
+	"\n\tif (st == NULL) {"
+	"\n\t\tDDS_FATAL(\"st is NULL\\n\");"
+	"\n\t\treturn NULL;"
+	"\n\t}\n"
+	"\n\tcJSON *obj = NULL;"
+	"\n\t/* Assemble cJSON* obj with *st. */"
+	"\n\tobj = cJSON_CreateObject();\n";
 
 static char ser_func_tail[] =
 	"\n\treturn obj;"
 	"\n}\n\n";
 
 static char deser_func_head[] =
-	"\n%s *mqtt_to_dds_%s_convert(cJSON *obj)"
+	"\nint mqtt_to_dds_%s_convert(cJSON *obj, %s *st)"
 	"\n{"
-	"\n\t%s *st = (%s*) calloc(1, sizeof(*st));"
+	"\n\tif (obj == NULL || st == NULL) {"
+	"\n\t\tDDS_FATAL(\"obj or st is NULL\\n\");"
+	"\n\t\treturn -1;"
+	"\n\t}\n"
+	"\n\tint rc = 0;"
 	"\n\tcJSON *item = NULL;\n";
 
 static char deser_func_tail[] =
-	"\n\treturn st;"
+	"\n\treturn 0;"
 	"\n}\n\n";
 
 static char ser_func_call[] =
-	"\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(st->%s));\n";
+	"\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(&st->%s));\n";
 
 static char deser_func_call[] =
-	"\n\tst->%s = mqtt_to_dds_%s_convert(item);\n";
+	"\n\trc = mqtt_to_dds_%s_convert(item, &st->%s);"
+	"\n\tif (rc != 0) {"
+	"\n\t\treturn rc;"
+	"\n\t}\n";
+
+typedef enum
+{
+	arr_t,
+	obj_t
+} type;
+
+static void AddArrayCommonHelper(char *tab, char *val, int *times, int num, type t)
+{
+
+	fprintf(g_fp, "%scJSON *%s = cJSON_CreateArray();\n", tab, val);
+	switch (t)
+	{
+	case obj_t:
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		break;
+	case arr_t:
+		fprintf(g_fp, "%scJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, *times, val, *times + 1);
+		break;
+	default:
+		break;
+	}
+	fprintf(g_fp, "%sfor (int i = 0; (i < (size_t) %d); i++) {\n", tab, num);
+	tab[++(*times)] = '\t';
+	fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(st->message[i]);\n", tab);
+	fprintf(g_fp, "%scJSON_AddItemToArray(message, n);\n", tab);
+}
 
 void cJSON_AddArrayCommon(char *p, char *val, char *type)
 {
@@ -75,8 +123,7 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 		int num = atoi(p);
 		char tmp[64];
 		size_t size = snprintf(tmp, 64, "st->%s", val);
-		fprintf(g_fp, "%scJSON *%s = cJSON_Create%sArray(%s, %d);\n", tab, val, type, tmp, num);
-		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		AddArrayCommonHelper(tab, val, &times, num, obj_t);
 	}
 
 	while (NULL != (p = strchr(p, '_')))
@@ -105,8 +152,8 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 				size = snprintf(where, 64, "[i%d]", i);
 				where = where + size;
 			}
-			fprintf(g_fp, "%s\tcJSON *%s%d = cJSON_Create%sArray(%s, %d);\n", tab, val, times + 1, type, tmp, num);
-			fprintf(g_fp, "%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
+
+			AddArrayCommonHelper(tab, val, &times, num, arr_t);
 		}
 
 		tab[++times] = '\t';
@@ -267,7 +314,6 @@ void cJSON_Add(cJSON *jso)
 	else
 	{
 		fprintf(g_fp, ser_func_call, val, key, val);
-		// log_err("Unsupport now: %s", key);
 	}
 	return;
 }
@@ -284,12 +330,10 @@ bool is_convert(char *type)
 
 void cJSON_GetArrayCommon(char *p, char *val, char *type)
 {
-	;
 	char *p_b = p;
 	int times = 0;
 	char tab[16] = {0};
 	tab[times] = '\t';
-	static bool first_time = true;
 
 	first_time ? fprintf(g_fp, "%sint i%d = 0;\n", tab, 0) : fprintf(g_fp, "%si%d = 0;\n", tab, 0);
 
@@ -407,7 +451,6 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		fprintf(g_fp, "%s}\n", tab);
 		tab[times--] = '\0';
 	}
-	fprintf(g_fp, "\n");
 }
 
 void cJSON_GetArray(char *key, char *val)
@@ -554,7 +597,7 @@ void cJSON_Get(cJSON *item)
 	char *type = item->string;
 	char *name = item->valuestring;
 
-	char *ret = (char *)malloc(sizeof(char) * 64);
+	char *ret = (char *)calloc(1, sizeof(char) * 128);
 	if (NULL == ret)
 	{
 		log_err("malloc error");
@@ -596,9 +639,7 @@ void cJSON_Get(cJSON *item)
 	}
 	else
 	{
-		snprintf(ret, 64, deser_func_call, name, type);
-		// log_err("Nonsupport now : %s", type);
-		// return;
+		snprintf(ret, 128, deser_func_call, type, name);
 	}
 
 	fprintf(g_fp, "%s\n", ret);
@@ -655,7 +696,7 @@ int idl_json_to_struct(cJSON *jso)
 	cJSON *ele = NULL;
 	cJSON *e = NULL;
 
-	char deser_func_header[] = "extern %s *mqtt_to_dds_%s_convert(cJSON *obj);\n";
+	char deser_func_header[] = "extern int mqtt_to_dds_%s_convert(cJSON *obj, %s *st);\n";
 	cJSON_ArrayForEach(arr, arrs)
 	{
 		cJSON_ArrayForEach(eles, arr)
@@ -668,14 +709,14 @@ int idl_json_to_struct(cJSON *jso)
 			}
 			else
 			{
+				first_time = true;
 				fprintf(g_hfp, deser_func_header, eles->string, eles->string);
-				fprintf(g_fp, deser_func_head, eles->string, eles->string, eles->string, eles->string);
+				fprintf(g_fp, deser_func_head, eles->string, eles->string);
 
 				cJSON_ArrayForEach(ele, eles)
 				{
 					cJSON_ArrayForEach(e, ele)
 					{
-
 						fprintf(g_fp, "\titem = cJSON_GetObjectItem(obj, \"%s\");\n", e->valuestring);
 						cJSON_Get(e);
 					}
