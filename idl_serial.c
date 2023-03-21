@@ -767,12 +767,13 @@ int idl_append_header_inc()
 
 	fprintf(g_hfp, "typedef int (*mqtt_to_dds_fn_t)(cJSON *, void *);\n");
 	fprintf(g_hfp, "typedef cJSON *(*dds_to_mqtt_fn_t)(void *);\n");
-	fprintf(g_hfp, "typedef void *(*dalloc_fn_t)(size_t size);\n");
+	fprintf(g_hfp, "typedef void *(*dalloc_fn_t)();\n");
 	fprintf(g_hfp, "typedef void (*dfree_fn_t)(\n");
-	fprintf(g_hfp, "    void *sample, const struct dds_topic_descriptor *desc, dds_free_op_t op);\n");
+	fprintf(g_hfp, "    void *sample, dds_free_op_t op);\n");
 	fprintf(g_hfp, "\n");
 	fprintf(g_hfp, "typedef struct\n");
 	fprintf(g_hfp, "{\n");
+	fprintf(g_hfp, "	const dds_topic_descriptor_t *desc;\n");
 	fprintf(g_hfp, "	dalloc_fn_t      alloc;\n");
 	fprintf(g_hfp, "	dfree_fn_t       free;\n");
 	fprintf(g_hfp, "	mqtt_to_dds_fn_t mqtt2dds;\n");
@@ -782,7 +783,7 @@ int idl_append_header_inc()
 	fprintf(g_hfp, "typedef struct\n");
 	fprintf(g_hfp, "{\n");
 	fprintf(g_hfp, "	char         *struct_name;\n");
-	fprintf(g_hfp, "	dds_info_set *op_set;\n");
+	fprintf(g_hfp, "	dds_info_set op_set;\n");
 	fprintf(g_hfp, "} dds_info_map;\n\n");
 
 	return 0;
@@ -829,7 +830,7 @@ int idl_serial_generator(const char *file, const char *out)
 	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
 
-	fprintf(g_hfp, "\nextern %s;\n", map);
+	fprintf(g_hfp, "\nextern %s[];\n", map);
 	fprintf(g_hfp, "\n#endif\n");
 	sprintf(g_map + g_map_cursor, "};\n");
 	fprintf(g_fp, g_map);
