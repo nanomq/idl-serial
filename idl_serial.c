@@ -19,7 +19,7 @@ static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
 static FILE *g_hfp = NULL;
 static bool first_time = true;
-static char g_map[1024] = {0};
+static char g_map[2048] = {0};
 static int g_map_cursor = 0;
 
 static char ser_num_func[] =
@@ -81,14 +81,31 @@ static char deser_func_call[] =
 	"\n\t\treturn rc;"
 	"\n\t}\n";
 
+
+static char init_format[] = 
+	"\nstatic void *"
+	"\n%s_init(void)"
+	"\n{"
+	"\n	return %s__alloc();"
+	"\n}\n";
+
+static char fini_format[] =
+	"\nstatic void"
+	"\n%s_fini(void *sample, dds_free_op_t op)"
+	"\n{"
+	"\n	return %s_free(sample, op);"
+	"\n}\n";
+
+
 static char map_format[] =
 	"\t{\n"
 	"\t\t\"%s\",\n"
 	"\t\t{\n"
-	"\t\t\t%s__alloc,\n"
-	"\t\t\t%s__free,\n"
-	"\t\t\tmqtt_to_dds_%s_convert,\n"
-	"\t\t\tdds_to_mqtt_%s_convert\n"
+	"\t\t\t&%s_desc,\n"
+	"\t\t\t%s_init,\n"
+	"\t\t\t%s_fini,\n"
+	"\t\t\t(mqtt_to_dds_fn_t) mqtt_to_dds_%s_convert,\n"
+	"\t\t\t(dds_to_mqtt_fn_t) dds_to_mqtt_%s_convert\n"
 	"\t\t}\n"
 	"\t},\n";
 
@@ -685,8 +702,11 @@ int idl_struct_to_json(cJSON *jso)
 			{
 				fprintf(g_hfp, ser_func_header, str, str);
 				fprintf(g_fp, ser_func_head, str, str);
-				int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str);
+				int size = sprintf(g_map + g_map_cursor, init_format, str, str);
 				g_map_cursor += size;
+				size = sprintf(g_map + g_map_cursor, fini_format, str, str);
+				g_map_cursor += size;
+
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -731,6 +751,8 @@ int idl_json_to_struct(cJSON *jso)
 				first_time = true;
 				fprintf(g_hfp, deser_func_header, str, str);
 				fprintf(g_fp, deser_func_head, str, str);
+				int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
+				g_map_cursor += size;
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -752,6 +774,7 @@ int idl_json_to_struct(cJSON *jso)
 int idl_append_src_inc(const char *src, char *header)
 {
 	fprintf(g_fp, "#include \"%s\"\n", header);
+	fprintf(g_fp, "#include \"dds/ddsrt/log.h\"\n");
 	fprintf(g_fp, "#include <stdio.h>\n");
 	fprintf(g_fp, "#include <string.h>\n");
 	fprintf(g_fp, "#include <stdlib.h>\n");
@@ -778,13 +801,13 @@ int idl_append_header_inc()
 	fprintf(g_hfp, "	dfree_fn_t       free;\n");
 	fprintf(g_hfp, "	mqtt_to_dds_fn_t mqtt2dds;\n");
 	fprintf(g_hfp, "	dds_to_mqtt_fn_t dds2mqtt;\n");
-	fprintf(g_hfp, "} dds_info_set;\n");
+	fprintf(g_hfp, "} dds_handler_set;\n");
 	fprintf(g_hfp, "\n");
 	fprintf(g_hfp, "typedef struct\n");
 	fprintf(g_hfp, "{\n");
 	fprintf(g_hfp, "	char         *struct_name;\n");
-	fprintf(g_hfp, "	dds_info_set op_set;\n");
-	fprintf(g_hfp, "} dds_info_map;\n\n");
+	fprintf(g_hfp, "	dds_handler_set op_set;\n");
+	fprintf(g_hfp, "} dds_handler_map;\n\n");
 
 	return 0;
 }
@@ -825,9 +848,12 @@ int idl_serial_generator(const char *file, const char *out)
 	g_hfp = fopen(header, "w");
 	idl_append_header_inc();
 
-	char map[] = "dds_info_map dds_struct_info_map";
-	g_map_cursor = sprintf(g_map, "%s[] = {\n", map);
 	idl_struct_to_json(jso);
+
+	char map[] = "dds_handler_map dds_struct_handler_map";
+	int size = sprintf(g_map+g_map_cursor, "%s[] = {\n", map);
+	g_map_cursor += size;
+
 	idl_json_to_struct(jso);
 
 	fprintf(g_hfp, "\nextern %s[];\n", map);
