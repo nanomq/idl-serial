@@ -824,9 +824,12 @@ int idl_serial_generator(const char *file, const char *out)
 	g_hfp = fopen(header, "w");
 	idl_append_header_inc();
 
-	g_map_cursor = sprintf(g_map, "extern dds_info_map dds_struct_info_map[] = {\n");
+	char map[] = "dds_info_map dds_struct_info_map";
+	g_map_cursor = sprintf(g_map, "%s[] = {\n", map);
 	idl_struct_to_json(jso);
 	idl_json_to_struct(jso);
+
+	fprintf(g_hfp, "\nextern %s;\n", map);
 	fprintf(g_hfp, "\n#endif\n");
 	sprintf(g_map + g_map_cursor, "};\n");
 	fprintf(g_fp, g_map);
