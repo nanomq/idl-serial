@@ -812,7 +812,7 @@ int idl_append_header_inc()
 	return 0;
 }
 
-void idl_get_header(char *src, char *header)
+void idl_get_header(const char *src, char *header)
 {
 	char name[32] = {0};
 	sscanf(src, "%[^.]", name);
@@ -859,7 +859,7 @@ int idl_serial_generator(const char *file, const char *out)
 	fprintf(g_hfp, "\nextern %s[];\n", map);
 	fprintf(g_hfp, "\n#endif\n");
 	sprintf(g_map + g_map_cursor, "};\n");
-	fprintf(g_fp, g_map);
+	fprintf(g_fp, "%s", g_map);
 
 	cJSON_free(str);
 	cJSON_Delete(jso);
