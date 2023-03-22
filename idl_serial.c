@@ -19,7 +19,7 @@ static char g_str[] = "STRING";
 static FILE *g_fp = NULL;
 static FILE *g_hfp = NULL;
 static bool first_time = true;
-static char g_map[2048] = {0};
+static char g_map[4096] = {0};
 static int g_map_cursor = 0;
 static int g_map_num = 0;
 
@@ -370,7 +370,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 
 	first_time = false;
 	fprintf(g_fp, "%scJSON *%s%d = NULL;\n", tab, val, times);
-	fprintf(g_fp, "%scJSON_ArrayForEach(item, %s%d) {\n", tab, val, times);
+	fprintf(g_fp, "%scJSON_ArrayForEach(%s%d, item) {\n", tab, val, times);
 	tab[++times] = '\t';
 
 	if (strchr(p, '_'))
@@ -394,7 +394,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 		}
 		else if (0 == strncmp(type, "string_", strlen("string_")))
 		{
-			fprintf(g_fp, "%s%s = strcpy(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
+			fprintf(g_fp, "strcpy(%s%s, %s%d->value%s);\n", tab, tmp, val, times - 1, type);
 		}
 		else
 		{
@@ -624,7 +624,7 @@ void cJSON_Get(cJSON *item)
 {
 	char fmt_non_cp[] = "\tst->%s = item->value%s;\n";
 	char fmt_cp[] = "\tstrncpy(st->%s, item->value%s, %d);\n";
-	char fmt_dup[] = "\tstrdup(st->%s, item->value%s);\n";
+	char fmt_dup[] = "\tst->%s = strdup(item->value%s);\n";
 	char *type = item->string;
 	char *name = item->valuestring;
 
