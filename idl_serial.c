@@ -133,8 +133,8 @@ static void AddArrayCommonHelper(char *tab, char *val, int *times, int num, type
 	}
 	fprintf(g_fp, "%sfor (int i = 0; (i < (size_t) %d); i++) {\n", tab, num);
 	tab[++(*times)] = '\t';
-	fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(st->message[i]);\n", tab);
-	fprintf(g_fp, "%scJSON_AddItemToArray(message, n);\n", tab);
+	fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(st->%s[i]);\n", tab, val);
+	fprintf(g_fp, "%scJSON_AddItemToArray(%s, n);\n", tab, val);
 }
 
 void cJSON_AddArrayCommon(char *p, char *val, char *type)
@@ -401,10 +401,11 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 			char t[16] = {0};
 			if (is_convert(type))
 			{
-				sprintf(t, "%s_t", type);
+				fprintf(g_fp, "%s%s = (%s_t) %s%d->valuedouble;\n", tab, tmp, type, val, times - 1);
+			} else {
+				fprintf(g_fp, "%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, type, val, times - 1);
 			}
 
-			fprintf(g_fp, "%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, t, val, times - 1);
 		}
 		tab[times--] = '\0';
 	}
