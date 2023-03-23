@@ -135,7 +135,7 @@ member: data_type VARIABLE SEMIC
                         break;
                 case OBJECT_TYPE_STRING_T:
                         log_info("STRING TEMPLATE VARIABLE SEMIC");
-                        char tmp[64]; 
+                        char tmp[64] = { 0 }; 
                         snprintf(tmp, 64, "STRING_T_%s", $1->data);
                         $$ = cJSON_CreateObject();
                         cJSON_AddStringToObject($$, tmp, $2);
@@ -147,7 +147,6 @@ member: data_type VARIABLE SEMIC
                         break;
                 case OBJECT_TYPE_SEQUENCE:
                         log_info("SEQUENCE VARIABLE SEMIC");
-                        tmp[64]; 
                         snprintf(tmp, 64, "sequence_%s", $1->data);
                         $$ = cJSON_CreateObject();
                         cJSON_AddStringToObject($$, tmp, $2);
