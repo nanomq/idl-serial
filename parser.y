@@ -290,6 +290,25 @@ data_dim: LMBRAC INTEGER RMBRAC
                 log_info("LMBRAC INTEGER RMBRAC");
                 $$ = $2;
         }
+        | LMBRAC VARIABLE RMBRAC
+        {
+                log_info("LMBRAC VARIABLE RMBRAC");
+                cJSON *ele = NULL;
+                char *val = NULL;
+                cJSON_ArrayForEach(ele, map) {
+                        if (ele && strcmp(ele->string, $2) == 0) {
+                                val = ele->valuestring;
+                                break;
+                        }
+                }
+
+                long rc = atol(val);
+                if (rc == 0) {
+                        sscanf(val, "(%ld)", &rc);
+                }
+                $$ = rc;
+        }
+
 
 
 %%
