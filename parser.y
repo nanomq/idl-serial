@@ -12,6 +12,7 @@
 extern FILE *yyin;
 extern int yylex();
 extern void yyerror(struct cJSON** jso, const char*);
+static cJSON *map = NULL;
 
 %}
 
@@ -30,6 +31,7 @@ extern void yyerror(struct cJSON** jso, const char*);
 %token STRING SEQUENCE BOOLEAN ENUM STRUCT
 %token <strval> NUMBER;
 %token <strval> VARIABLE;
+%token <strval> MACRO;
 %token <intval> INTEGER;
 
 
@@ -58,8 +60,8 @@ values: value
         }
         | values value
         {
-                log_info("values SEMIC value");
-                cJSON_AddItemToArray($$, $2);
+                log_info("values value");
+                if ($2) cJSON_AddItemToArray($$, $2);
         }
         ;
 
@@ -82,6 +84,19 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 char tmp[64] = {0};
                 snprintf(tmp, 64, "ARRAY%s%s", $1, $2);
                 cJSON_AddNumberToObject($$, tmp, $4);
+        }
+        | MACRO
+        {
+                log_info("MACRO");
+                char *val = $1;
+                while (*val != ' ') val++;
+                *val++ = '\0';
+                while (*val == ' ') val++;
+                if (map == NULL) {
+                        map = cJSON_CreateObject();
+                }
+                cJSON_AddStringToObject(map, $1, val);
+                $$ = NULL;
         }
         ;
 
