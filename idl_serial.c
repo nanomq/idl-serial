@@ -11,6 +11,7 @@
 
 extern FILE *yyin;
 extern int yyparse(struct cJSON **jso);
+extern char **keylist_vec;
 
 static char g_num[] = "NUMBER";
 static char g_arr[] = "ARRAY";
@@ -704,10 +705,16 @@ int idl_struct_to_json(cJSON *jso)
 			{
 				fprintf(g_hfp, ser_func_header, str, str);
 				fprintf(g_fp, ser_func_head, str, str);
-				int size = sprintf(g_map + g_map_cursor, init_format, str, str);
-				g_map_cursor += size;
-				size = sprintf(g_map + g_map_cursor, fini_format, str, str);
-				g_map_cursor += size;
+				
+				for (int i = 0; i < cvector_size(keylist_vec); i++) {
+					if (0 == strcmp(str, keylist_vec[i])) {
+						int size = sprintf(g_map + g_map_cursor, init_format, str, str);
+						g_map_cursor += size;
+						size = sprintf(g_map + g_map_cursor, fini_format, str, str);
+						g_map_cursor += size;
+					}
+
+				}
 
 
 				cJSON_ArrayForEach(ele, eles)
@@ -753,9 +760,14 @@ int idl_json_to_struct(cJSON *jso)
 				first_time = true;
 				fprintf(g_hfp, deser_func_header, str, str);
 				fprintf(g_fp, deser_func_head, str, str);
-				int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
-				g_map_cursor += size;
-				g_map_num++;
+
+				for (int i = 0; i < cvector_size(keylist_vec); i++) {
+					if (0 == strcmp(str, keylist_vec[i])) {
+						int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
+						g_map_cursor += size;
+						g_map_num++;
+					}
+				}
 
 				cJSON_ArrayForEach(ele, eles)
 				{
