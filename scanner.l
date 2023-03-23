@@ -74,6 +74,7 @@ Data_representation     @data_representation\((({Representation_type}\|)?)*{Repr
 Topic                   @topic
 Default_nested          @default_nested(\({Bool_type}\))?
 Pragma_keylist          #pragma{Keylist}{Variable}
+Macro                   #define{WhiteSpace}([A-Za-z_][A-Za-z0-9_]*){WhiteSpace}([^\n]*)
 
 
 %%
@@ -106,7 +107,6 @@ Pragma_keylist          #pragma{Keylist}{Variable}
                             yylval.strval = strdup(yytext); 
                             return VARIABLE; 
                         }
-
 {Key}                   { debug("Key type: %s", yytext); }
 {Bit_bound}             { debug("Bit bound type: %s", yytext); }
 {Final}                 { debug("Final type: %s", yytext); }
@@ -125,8 +125,13 @@ Pragma_keylist          #pragma{Keylist}{Variable}
 {Pragma_keylist}        { debug("Pragma keylist type: %s", yytext); }
 {Optional}              { debug("Optional type"); }
 {External}              { debug("External type"); }
-
-
+{Macro}                 {
+                            debug("Macro type: %s", yytext);
+                            char *val = strstr(yytext, "#define") + strlen("#define");
+                            while (*val == ' ') val++;
+                            yylval.strval = strdup(val);
+                            return MACRO;
+                        }
 .                       { debug("Unrecognized %c", yytext[0]); }
 
 %%
