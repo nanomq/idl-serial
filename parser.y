@@ -12,7 +12,8 @@
 extern FILE *yyin;
 extern int yylex();
 extern void yyerror(struct cJSON** jso, const char*);
-static cJSON *map = NULL;
+static cJSON *macro_map = NULL;
+extern char **keylist_vec = NULL;
 
 %}
 
@@ -28,7 +29,7 @@ static cJSON *map = NULL;
 
 
 %token LCURLY RCURLY LBRAC RBRAC LMBRAC RMBRAC COMMA SEMIC
-%token STRING SEQUENCE BOOLEAN ENUM STRUCT
+%token STRING SEQUENCE BOOLEAN ENUM STRUCT PRAGMA_KEYLIST
 %token <strval> NUMBER;
 %token <strval> VARIABLE;
 %token <strval> MACRO;
@@ -43,6 +44,7 @@ static cJSON *map = NULL;
 %type <objval> data_type
 %type <intval> data_dim
 %type <intsval> data_dims
+%type <strval> variables
 %%
 
 start:  values
@@ -92,13 +94,28 @@ value:  STRUCT VARIABLE LCURLY members RCURLY SEMIC
                 while (*val != ' ') val++;
                 *val++ = '\0';
                 while (*val == ' ') val++;
-                if (map == NULL) {
-                        map = cJSON_CreateObject();
+                if (macro_map == NULL) {
+                        macro_map = cJSON_CreateObject();
                 }
-                cJSON_AddStringToObject(map, $1, val);
+                cJSON_AddStringToObject(macro_map, $1, val);
+                $$ = NULL;
+        }
+        | PRAGMA_KEYLIST variables
+        {
+                log_info("PRAGMA_KEYLIST");
+                cvector_push_back(keylist_vec, $2);
                 $$ = NULL;
         }
         ;
+
+variables : VARIABLE 
+        {
+                $$ = $1;
+        }
+        | variables VARIABLE
+        {
+                $$ = $1;
+        }
 
 
 members: member
@@ -294,7 +311,7 @@ data_dim: LMBRAC INTEGER RMBRAC
                 log_info("LMBRAC VARIABLE RMBRAC");
                 cJSON *ele = NULL;
                 char *val = NULL;
-                cJSON_ArrayForEach(ele, map) {
+                cJSON_ArrayForEach(ele, macro_map) {
                         if (ele && strcmp(ele->string, $2) == 0) {
                                 val = ele->valuestring;
                                 break;
