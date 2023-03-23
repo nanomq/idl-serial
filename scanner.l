@@ -73,7 +73,7 @@ Must_understand         @must_understand(\({Bool_type}\))?
 Data_representation     @data_representation\((({Representation_type}\|)?)*{Representation_type}\)
 Topic                   @topic
 Default_nested          @default_nested(\({Bool_type}\))?
-Pragma_keylist          #pragma{Keylist}{Variable}
+Pragma_keylist          #pragma{Keylist}
 Macro                   #define{WhiteSpace}([A-Za-z_][A-Za-z0-9_]*){WhiteSpace}([^\n]*)
 
 
@@ -122,9 +122,12 @@ Macro                   #define{WhiteSpace}([A-Za-z_][A-Za-z0-9_]*){WhiteSpace}(
 {Data_representation}   { debug("Data_representation type: %s", yytext); }
 {Topic}                 { debug("Topic type: %s", yytext); }
 {Default_nested}        { debug("Default_nested type: %s", yytext); }
-{Pragma_keylist}        { debug("Pragma keylist type: %s", yytext); }
 {Optional}              { debug("Optional type"); }
 {External}              { debug("External type"); }
+{Pragma_keylist}        {
+                            debug("Pragma keylist type: %s", yytext);
+                            return PRAGMA_KEYLIST;
+                        }
 {Macro}                 {
                             debug("Macro type: %s", yytext);
                             char *val = strstr(yytext, "#define") + strlen("#define");
