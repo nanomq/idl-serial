@@ -683,6 +683,14 @@ void cJSON_Get(cJSON *item)
 	return;
 }
 
+void generate_init_fini_func(char *str)
+{
+	int size = sprintf(g_map + g_map_cursor, init_format, str, str);
+	g_map_cursor += size;
+	size = sprintf(g_map + g_map_cursor, fini_format, str, str);
+	g_map_cursor += size;
+}
+
 int idl_struct_to_json(cJSON *jso)
 {
 	cJSON *arrs = jso;
@@ -705,17 +713,16 @@ int idl_struct_to_json(cJSON *jso)
 			else
 			{
 				fprintf(g_fp, ser_func_head, str, str);
-				
-				for (int i = 0; i < cvector_size(keylist_vec); i++) {
-					if (0 == strcmp(str, keylist_vec[i])) {
-						int size = sprintf(g_map + g_map_cursor, init_format, str, str);
-						g_map_cursor += size;
-						size = sprintf(g_map + g_map_cursor, fini_format, str, str);
-						g_map_cursor += size;
+
+				if (keylist_vec == NULL) {
+					generate_init_fini_func(str);
+				} else {
+					for (int i = 0; i < cvector_size(keylist_vec); i++) {
+						if (0 == strcmp(str, keylist_vec[i])) {
+							generate_init_fini_func(str);
+						}
 					}
-
 				}
-
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -731,6 +738,13 @@ int idl_struct_to_json(cJSON *jso)
 	}
 
 	return 0;
+}
+
+void generate_func_map(char *str)
+{
+	int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
+	g_map_cursor += size;
+	g_map_num++;
 }
 
 int idl_json_to_struct(cJSON *jso)
@@ -758,11 +772,14 @@ int idl_json_to_struct(cJSON *jso)
 				first_time = true;
 				fprintf(g_fp, deser_func_head, str, str);
 
-				for (int i = 0; i < cvector_size(keylist_vec); i++) {
-					if (0 == strcmp(str, keylist_vec[i])) {
-						int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
-						g_map_cursor += size;
-						g_map_num++;
+				if (keylist_vec == NULL) {
+					generate_func_map(str);
+				} else {
+					for (int i = 0; i < cvector_size(keylist_vec); i++) {
+						if (0 == strcmp(str, keylist_vec[i])) {
+							generate_func_map(str);
+							break;
+						}
 					}
 				}
 
