@@ -13,7 +13,7 @@ extern FILE *yyin;
 extern int yylex();
 extern void yyerror(struct cJSON** jso, const char*);
 static cJSON *macro_map = NULL;
-extern char **keylist_vec = NULL;
+char **keylist_vec = NULL;
 
 %}
 
