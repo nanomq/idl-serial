@@ -25,7 +25,8 @@ static int g_map_cursor = 0;
 static int g_map_num = 0;
 
 static char ser_num_func[] =
-	"\ncJSON *dds_to_mqtt_%s_convert(%s *enu)"
+	"\nstatic cJSON *"
+	"\ndds_to_mqtt_%s_convert(%s *enu)"
 	"\n{\n"
 	"\n\tif (enu == NULL) {"
 	"\n\t\tDDS_FATAL(\"enu is NULL\\n\");"
@@ -35,7 +36,8 @@ static char ser_num_func[] =
 	"\n}\n";
 
 static char deser_num_func[] =
-	"\nint mqtt_to_dds_%s_convert(cJSON *obj, %s *enu)"
+	"\nstatic int"
+	"\nmqtt_to_dds_%s_convert(cJSON *obj, %s *enu)"
 	"\n{\n"
 	"\n\tif (obj == NULL || enu == NULL) {"
 	"\n\t\tDDS_FATAL(\"obj or enu is NULL\\n\");"
@@ -46,7 +48,8 @@ static char deser_num_func[] =
 	"\n}\n\n";
 
 static char ser_func_head[] =
-	"\ncJSON *dds_to_mqtt_%s_convert(%s *st)"
+	"\nstatic cJSON *"
+	"\ndds_to_mqtt_%s_convert(%s *st)"
 	"\n{\n"
 	"\n\tif (st == NULL) {"
 	"\n\t\tDDS_FATAL(\"st is NULL\\n\");"
@@ -61,7 +64,8 @@ static char ser_func_tail[] =
 	"\n}\n\n";
 
 static char deser_func_head[] =
-	"\nint mqtt_to_dds_%s_convert(cJSON *obj, %s *st)"
+	"\nstatic int"
+	"\nmqtt_to_dds_%s_convert(cJSON *obj, %s *st)"
 	"\n{"
 	"\n\tif (obj == NULL || st == NULL) {"
 	"\n\t\tDDS_FATAL(\"obj or st is NULL\\n\");"
@@ -687,8 +691,6 @@ int idl_struct_to_json(cJSON *jso)
 	cJSON *ele = NULL;
 	cJSON *e = NULL;
 
-	char ser_func_header[] = "extern cJSON *dds_to_mqtt_%s_convert(%s *st);\n";
-
 	cJSON_ArrayForEach(arr, arrs)
 	{
 		cJSON_ArrayForEach(eles, arr)
@@ -698,12 +700,10 @@ int idl_struct_to_json(cJSON *jso)
 
 			if (0 == strncmp(str, g_enu, strlen(g_enu)))
 			{
-				fprintf(g_hfp, ser_func_header, vstr, vstr);
 				fprintf(g_fp, ser_num_func, vstr, vstr);
 			}
 			else
 			{
-				fprintf(g_hfp, ser_func_header, str, str);
 				fprintf(g_fp, ser_func_head, str, str);
 				
 				for (int i = 0; i < cvector_size(keylist_vec); i++) {
@@ -742,7 +742,6 @@ int idl_json_to_struct(cJSON *jso)
 	cJSON *ele = NULL;
 	cJSON *e = NULL;
 
-	char deser_func_header[] = "extern int mqtt_to_dds_%s_convert(cJSON *obj, %s *st);\n";
 	cJSON_ArrayForEach(arr, arrs)
 	{
 		cJSON_ArrayForEach(eles, arr)
@@ -752,13 +751,11 @@ int idl_json_to_struct(cJSON *jso)
 
 			if (0 == strncmp(str, g_enu, strlen(g_enu)))
 			{
-				fprintf(g_hfp, deser_func_header, vstr, vstr);
 				fprintf(g_fp, deser_num_func, vstr, vstr);
 			}
 			else
 			{
 				first_time = true;
-				fprintf(g_hfp, deser_func_header, str, str);
 				fprintf(g_fp, deser_func_head, str, str);
 
 				for (int i = 0; i < cvector_size(keylist_vec); i++) {
