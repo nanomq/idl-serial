@@ -56,7 +56,8 @@ const char deser_func_tail[] =
     "\n}\n\n";
 
 const char ser_func_call[] =
-    "\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(&st->%s));\n";
+    "\n\tcJSON_AddItemToObject(obj, \"%s\", "
+    "dds_to_mqtt_%s_convert(&st->%s));\n";
 
 const char deser_func_call[] =
     "\n\t\trc = mqtt_to_dds_%s_convert(item, &st->%s);"

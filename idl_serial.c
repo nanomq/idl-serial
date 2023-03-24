@@ -702,13 +702,21 @@ int idl_append_src_inc(const char *src, char *header)
 	return 0;
 }
 
-int idl_append_header_inc()
+char *get_idl_file_name(char *file)
 {
+	char *p = strrchr(file, '.');
+	char *p_b = strrchr(file, '/');
+	*p = '\0';
+	return p_b ? p_b + 1 : file;
+}
+
+int idl_append_header_inc(const char *file)
+{
+	char *name = get_idl_file_name(file);
 	fprintf(g_hfp, "#ifndef __IDL_CONVERT_H__\n");
 	fprintf(g_hfp, "#define __IDL_CONVERT_H__\n\n");
 	fprintf(g_hfp, "#include \"nng/supplemental/nanolib/cJSON.h\"\n");
-	fprintf(g_hfp, "#include \"dds_type.h\"\n\n");
-
+	fprintf(g_hfp, "#include \"%s.h\"\n\n", name);
 	fprintf(g_hfp, "typedef int (*mqtt_to_dds_fn_t)(cJSON *, void *);\n");
 	fprintf(g_hfp, "typedef cJSON *(*dds_to_mqtt_fn_t)(void *);\n");
 	fprintf(g_hfp, "typedef void *(*dalloc_fn_t)();\n");
@@ -757,6 +765,7 @@ static cJSON *idl_parser(const char *file)
 	return jso;
 }
 
+
 int idl_serial_generator(const char *file, const char *out)
 {
 
@@ -768,12 +777,13 @@ int idl_serial_generator(const char *file, const char *out)
 	g_fp = fopen(src, "w");
 	g_hfp = fopen(header, "w");
 
-	// Append include
-	idl_append_src_inc(out, header);
-	idl_append_header_inc();
-
 	// Parser
 	cJSON *jso = idl_parser(file);
+
+	// Append include
+	idl_append_src_inc(out, header);
+	idl_append_header_inc(file);
+
 
 	// Generate code
 	idl_struct_to_json(jso);
