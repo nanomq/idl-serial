@@ -11,6 +11,7 @@
 
 extern FILE *yyin;
 extern int yyparse(struct cJSON **jso);
+extern char **keylist_vec;
 
 static char g_num[] = "NUMBER";
 static char g_arr[] = "ARRAY";
@@ -704,10 +705,16 @@ int idl_struct_to_json(cJSON *jso)
 			{
 				fprintf(g_hfp, ser_func_header, str, str);
 				fprintf(g_fp, ser_func_head, str, str);
-				int size = sprintf(g_map + g_map_cursor, init_format, str, str);
-				g_map_cursor += size;
-				size = sprintf(g_map + g_map_cursor, fini_format, str, str);
-				g_map_cursor += size;
+				
+				for (int i = 0; i < cvector_size(keylist_vec); i++) {
+					if (0 == strcmp(str, keylist_vec[i])) {
+						int size = sprintf(g_map + g_map_cursor, init_format, str, str);
+						g_map_cursor += size;
+						size = sprintf(g_map + g_map_cursor, fini_format, str, str);
+						g_map_cursor += size;
+					}
+
+				}
 
 
 				cJSON_ArrayForEach(ele, eles)
@@ -753,9 +760,14 @@ int idl_json_to_struct(cJSON *jso)
 				first_time = true;
 				fprintf(g_hfp, deser_func_header, str, str);
 				fprintf(g_fp, deser_func_head, str, str);
-				int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
-				g_map_cursor += size;
-				g_map_num++;
+
+				for (int i = 0; i < cvector_size(keylist_vec); i++) {
+					if (0 == strcmp(str, keylist_vec[i])) {
+						int size = sprintf(g_map + g_map_cursor, map_format, str, str, str, str, str, str);
+						g_map_cursor += size;
+						g_map_num++;
+					}
+				}
 
 				cJSON_ArrayForEach(ele, eles)
 				{
@@ -815,20 +827,13 @@ int idl_append_header_inc()
 	return 0;
 }
 
-void idl_get_header(const char *src, char *header)
-{
-	char name[32] = {0};
-	sscanf(src, "%[^.]", name);
-	snprintf(header, 64, "%s.h", name);
-}
-
-int idl_serial_generator(const char *file, const char *out)
+static cJSON *idl_parser(const char *file)
 {
 	int rv = 0;
 	if (!(yyin = fopen(file, "r")))
 	{
 		fprintf(stderr, "Failed to open %s: %s\n", file, strerror(errno));
-		return -1;
+		return NULL;
 	}
 
 	cJSON *jso;
@@ -836,21 +841,35 @@ int idl_serial_generator(const char *file, const char *out)
 	if (0 != rv)
 	{
 		fprintf(stderr, "invalid data to parse!\n");
-		return -1;
+		return NULL;
 	}
 
 	char *str = cJSON_PrintUnformatted(jso);
 	log_info("%s", str);
+	cJSON_free(str);
 
-	g_fp = fopen(out, "w");
+	return jso;
+}
 
-	char header[64] = {0};
-	idl_get_header(out, header);
-	idl_append_src_inc(out, header);
+int idl_serial_generator(const char *file, const char *out)
+{
 
+	// Open src/header file
+	char src[64] = { 0 };
+	char header[64] = { 0 };
+	snprintf(src, 64, "%s.c", out);
+	snprintf(header, 64, "%s.h", out);
+	g_fp = fopen(src, "w");
 	g_hfp = fopen(header, "w");
+
+	// Append include
+	idl_append_src_inc(out, header);
 	idl_append_header_inc();
 
+	// Parser
+	cJSON *jso = idl_parser(file);
+
+	// Generate code
 	idl_struct_to_json(jso);
 
 	char map[] = "dds_handler_map dds_struct_handler_map";
@@ -864,7 +883,6 @@ int idl_serial_generator(const char *file, const char *out)
 	sprintf(g_map + g_map_cursor, "};\n");
 	fprintf(g_fp, "%s", g_map);
 
-	cJSON_free(str);
 	cJSON_Delete(jso);
 	fclose(g_fp);
 	fclose(g_hfp);
