@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "cJSON.h"
 #include "dbg.h"
+#include "idl_fmt.h"
 #include "cvector.h"
 #include <stdlib.h>
 #include <string.h>
@@ -17,108 +18,14 @@ static char g_num[] = "NUMBER";
 static char g_arr[] = "ARRAY";
 static char g_enu[] = "ENUM";
 static char g_str[] = "STRING";
-static FILE *g_fp = NULL;
-static FILE *g_hfp = NULL;
+
+static FILE *g_fp = NULL; // Source file pointer
+static FILE *g_hfp = NULL; // Header file pointer
+
 static char g_map[4096] = { 0 };
 static int g_map_cursor = 0;
 static int g_map_num = 0;
 
-static char ser_num_func[] =
-	"\nstatic cJSON *"
-	"\ndds_to_mqtt_%s_convert(%s *enu)"
-	"\n{\n"
-	"\n\tif (enu == NULL) {"
-	"\n\t\tDDS_FATAL(\"enu is NULL\\n\");"
-	"\n\t\treturn NULL;"
-	"\n\t}\n"
-	"\n\treturn cJSON_CreateNumber(*enu);\n"
-	"\n}\n";
-
-static char deser_num_func[] =
-	"\nstatic int"
-	"\nmqtt_to_dds_%s_convert(cJSON *obj, %s *enu)"
-	"\n{\n"
-	"\n\tif (obj == NULL || enu == NULL) {"
-	"\n\t\tDDS_FATAL(\"obj or enu is NULL\\n\");"
-	"\n\t\treturn -1;"
-	"\n\t}\n"
-	"\n\t*enu = cJSON_GetNumberValue(obj);\n"
-	"\n\treturn 0;\n"
-	"\n}\n\n";
-
-static char ser_func_head[] =
-	"\nstatic cJSON *"
-	"\ndds_to_mqtt_%s_convert(%s *st)"
-	"\n{\n"
-	"\n\tif (st == NULL) {"
-	"\n\t\tDDS_FATAL(\"st is NULL\\n\");"
-	"\n\t\treturn NULL;"
-	"\n\t}\n"
-	"\n\tcJSON *obj = NULL;"
-	"\n\t/* Assemble cJSON* obj with *st. */"
-	"\n\tobj = cJSON_CreateObject();\n";
-
-static char ser_func_tail[] =
-	"\n\treturn obj;"
-	"\n}\n\n";
-
-static char deser_func_head[] =
-	"\nstatic int"
-	"\nmqtt_to_dds_%s_convert(cJSON *obj, %s *st)"
-	"\n{"
-	"\n\tif (obj == NULL || st == NULL) {"
-	"\n\t\tDDS_FATAL(\"obj or st is NULL\\n\");"
-	"\n\t\treturn -1;"
-	"\n\t}\n"
-	"\n\tint rc = 0;"
-	"\n\tcJSON *item = NULL;\n";
-
-static char deser_func_tail[] =
-	"\n\treturn 0;"
-	"\n}\n\n";
-
-static char ser_func_call[] =
-	"\n\tcJSON_AddItemToObject(obj, \"%s\", dds_to_mqtt_%s_convert(&st->%s));\n";
-
-static char deser_func_call[] =
-	"\n\t\trc = mqtt_to_dds_%s_convert(item, &st->%s);"
-	"\n\t\tif (rc != 0) {"
-	"\n\t\t\treturn rc;"
-	"\n\t\t}\n";
-
-
-static char init_format[] = 
-	"\nstatic void *"
-	"\n%s_init(void)"
-	"\n{"
-	"\n	return %s__alloc();"
-	"\n}\n";
-
-static char fini_format[] =
-	"\nstatic void"
-	"\n%s_fini(void *sample, dds_free_op_t op)"
-	"\n{"
-	"\n	return %s_free(sample, op);"
-	"\n}\n";
-
-
-static char map_format[] =
-	"\t{\n"
-	"\t\t\"%s\",\n"
-	"\t\t{\n"
-	"\t\t\t&%s_desc,\n"
-	"\t\t\t%s_init,\n"
-	"\t\t\t%s_fini,\n"
-	"\t\t\t(mqtt_to_dds_fn_t) mqtt_to_dds_%s_convert,\n"
-	"\t\t\t(dds_to_mqtt_fn_t) dds_to_mqtt_%s_convert\n"
-	"\t\t}\n"
-	"\t},\n";
-
-typedef enum
-{
-	arr_t,
-	obj_t
-} type;
 
 static void AddArrayCommonHelper(char *tab, char *val, int *times, int num, type t)
 {
@@ -140,6 +47,21 @@ static void AddArrayCommonHelper(char *tab, char *val, int *times, int num, type
 	fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(st->%s[i]);\n", tab, val);
 	fprintf(g_fp, "%scJSON_AddItemToArray(%s, n);\n", tab, val);
 }
+
+
+void generate_struct_arr_get(char *dest, size_t len, int times, const char *val)
+{
+	size_t size = snprintf(dest, len, "st->%s", val);
+	len -= size;
+	char *where = dest + size;
+	for (int i = 0; i <= times; i++)
+	{
+		size = snprintf(where, len, "[i%d]", i);
+		where += size;
+		len -= size;
+	}
+}
+
 
 void cJSON_AddArrayCommon(char *p, char *val, char *type)
 {
@@ -180,14 +102,7 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 		{
 			num = atoi(p);
 			char tmp[64];
-			size_t size = snprintf(tmp, 64, "st->%s", val);
-			char *where = tmp + size;
-			for (int i = 0; i <= times; i++)
-			{
-				size = snprintf(where, 64, "[i%d]", i);
-				where = where + size;
-			}
-
+			generate_struct_arr_get(tmp, 64, times, val);
 			AddArrayCommonHelper(tab, val, &times, num, arr_t);
 		}
 
@@ -383,13 +298,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 	{
 
 		char tmp[64];
-		size_t size = snprintf(tmp, 64, "st->%s", val);
-		char *where = tmp + size;
-		for (int i = 0; i < times; i++)
-		{
-			size = snprintf(where, 64, "[i%d]", i);
-			where = where + size;
-		}
+		generate_struct_arr_get(tmp, 64, times-1, val);
 		if (0 == strncmp(type, "string", strlen("string")))
 		{
 			fprintf(g_fp, "\t%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
@@ -430,14 +339,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 			if (0 == strncmp(type, "string_", strlen("string_")))
 			{
 				char tmp[64];
-				size_t size = snprintf(tmp, 64, "st->%s", val);
-				char *where = tmp + size;
-				for (int i = 0; i <= times; i++)
-				{
-					size = snprintf(where, 64, "[i%d]", i);
-					where = where + size;
-				}
-
+				generate_struct_arr_get(tmp, 64, times, val);
 				fprintf(g_fp, "%s\t\tstrcpy(%s, %s%d->valuestring);\n", tab, tmp, val, times);
 			}
 			else
@@ -451,13 +353,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 				p_b = p;
 
 				char tmp[64];
-				size_t size = snprintf(tmp, 64, "st->%s", val);
-				char *where = tmp + size;
-				for (int i = 0; i <= times; i++)
-				{
-					size = snprintf(where, 64, "[i%d]", i);
-					where = where + size;
-				}
+				generate_struct_arr_get(tmp, 64, times, val);
 				if (0 == strncmp(type, "string", strlen("string")))
 				{
 					fprintf(g_fp, "\t\t%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
