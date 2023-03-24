@@ -710,7 +710,7 @@ char *get_idl_file_name(char *file)
 	return p_b ? p_b + 1 : file;
 }
 
-int idl_append_header_inc(const char *file)
+int idl_append_header_inc(char *file)
 {
 	char *name = get_idl_file_name(file);
 	fprintf(g_hfp, "#ifndef __IDL_CONVERT_H__\n");
@@ -766,7 +766,7 @@ static cJSON *idl_parser(const char *file)
 }
 
 
-int idl_serial_generator(const char *file, const char *out)
+int idl_serial_generator(char *file, const char *out)
 {
 
 	// Open src/header file
