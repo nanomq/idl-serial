@@ -2,6 +2,12 @@
 #define IDL_SERIAL_H
 #include "cJSON.h"
 
-int idl_serial_generator(const char *file, const char *out);
+typedef enum
+{
+	arr_t,
+	obj_t
+} type;
+
+int idl_serial_generator(char *file, const char *out);
 
 #endif

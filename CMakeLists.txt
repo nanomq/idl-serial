@@ -33,3 +33,6 @@ target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(idl-serial-code-gen ${CMAKE_CURRENT_SOURCE_DIR}/main.c)
 target_include_directories(idl-serial-code-gen PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(idl-serial-code-gen PRIVATE idl-serial)
+
+install(TARGETS idl-serial LIBRARY DESTINATION lib)
+install(TARGETS idl-serial-code-gen DESTINATION bin)

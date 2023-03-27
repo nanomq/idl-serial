@@ -35,8 +35,6 @@ char **keylist_vec = NULL;
 %token <strval> MACRO;
 %token <intval> INTEGER;
 
-
-
 %type <jsonval> value
 %type <jsonval> values
 %type <jsonval> member
