@@ -765,15 +765,36 @@ static cJSON *idl_parser(const char *file)
 	return jso;
 }
 
+static void move_file_to_dir(const char *src, const char *out_dir)
+{
+	if (out_dir != NULL)
+	{
+		size_t dir_len = strlen(out_dir);
+		if (dir_len > 0)
+		{
+			char new_path[512] = {0};
+			if (out_dir[dir_len - 1] == '/')
+			{
+				snprintf(new_path, 512, "%s%s", out_dir, src);
+			}
+			else
+			{
+				snprintf(new_path, 512, "%s/%s", out_dir, src);
+			}
+			rename(src, new_path);
+		}
+	}
+}
 
-int idl_serial_generator(char *file, const char *out)
+int idl_serial_generator(char *file, const char *out, const char *out_dir)
 {
 
 	// Open src/header file
-	char src[64] = { 0 };
-	char header[64] = { 0 };
-	snprintf(src, 64, "%s.c", out);
-	snprintf(header, 64, "%s.h", out);
+	char src[255] = { 0 };
+	char header[255] = { 0 };
+
+	snprintf(src, 255, "%s.c", out);
+	snprintf(header, 255, "%s.h", out);
 	g_fp = fopen(src, "w");
 	g_hfp = fopen(header, "w");
 
@@ -802,6 +823,12 @@ int idl_serial_generator(char *file, const char *out)
 	cJSON_Delete(jso);
 	fclose(g_fp);
 	fclose(g_hfp);
+
+	if (out_dir != NULL)
+	{
+		move_file_to_dir(src, out_dir);
+		move_file_to_dir(header, out_dir);
+	}
 
 	return 0;
 }
