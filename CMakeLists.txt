@@ -25,7 +25,7 @@ flex_target(LEXER "scanner.l" "${LEXER_OUT}" DEFINES_FILE "${PARSER_DIR}/scanner
 bison_target(PARSER "parser.y" "${PARSER_OUT}" DEFINES_FILE "${PARSER_DIR}/parser.h")
 add_flex_bison_dependency(LEXER PARSER)
 
-add_library(idl-serial SHARED "${LEXER_OUT}" "${PARSER_OUT}" "${SRC}")
+add_library(idl-serial STATIC "${LEXER_OUT}" "${PARSER_OUT}" "${SRC}")
 
 target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(idl-serial PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
