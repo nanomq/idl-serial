@@ -8,6 +8,6 @@ typedef enum
 	obj_t
 } type;
 
-int idl_serial_generator(char *file, const char *out);
+int idl_serial_generator(char *file, const char *out, const char *dir);
 
 #endif
