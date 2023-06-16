@@ -205,6 +205,20 @@ member: data_type VARIABLE SEMIC
                 $$ = cJSON_CreateObject();
                 cJSON_AddStringToObject($$, tmp, $2);
         }
+        | VARIABLE VARIABLE data_dims SEMIC
+        {
+                log_info("VARIABLE VARIABLE data_dims SEMIC");
+                char tmp[64];
+                size_t size = 0;
+                size = snprintf(tmp, 64, "ARRAY_STRUCT_%s@", $1);
+                char *where = tmp + size;
+                for (int i = 0; i < cvector_size($3); i++) {
+                        size = snprintf(where, 64, "_%d", $3[i]);
+                        where = where + size;
+                }
+                $$ = cJSON_CreateObject();
+                cJSON_AddStringToObject($$, tmp, $2);
+        }
         | VARIABLE VARIABLE SEMIC 
         {
                 log_info("VARIABLE VARIABLE SEMIC");
