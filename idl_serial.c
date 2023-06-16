@@ -4,6 +4,7 @@
 #include "cJSON.h"
 #include "dbg.h"
 #include "idl_fmt.h"
+#include "utils.h"
 #include "cvector.h"
 #include <stdlib.h>
 #include <string.h>
@@ -278,7 +279,7 @@ bool is_convert(char *type)
 	return false;
 }
 
-void cJSON_GetArrayCommon(char *p, char *val, char *type)
+void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 {
 	char *p_b = p;
 	int times = 0;
@@ -292,23 +293,83 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 
 	if (strchr(p, '_'))
 	{
-		p = strchr(p, '_') + 1;
+		while (NULL != (p = strchr(p, '_'))) {
+
+			*p = '\0';
+			int num = atoi(p_b);
+
+			fprintf(g_fp, "\t%sint i%d = 0;\n", tab, times);
+			fprintf(g_fp, "\t%scJSON *%s%d = NULL;\n", tab, val, times);
+			fprintf(g_fp, "\t%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
+			*p++ = '_';
+			p_b = p;
+
+			if (NULL == strchr(p, '_'))
+			{
+					switch (ot)
+					{
+					case OBJECT_TYPE_STRING_T:;
+						char tmp[64] = { 0 };
+						generate_struct_arr_get(tmp, 64, times, val);
+						fprintf(g_fp, "%s\t\tstrcpy(%s, %s%d->valuestring);\n", tab, tmp, val, times);
+						break;
+
+					case OBJECT_TYPE_STRING:
+					case OBJECT_TYPE_NUMBER:
+					case OBJECT_TYPE_STRUCT:
+
+						tab[++times] = '\t';
+						p++;
+						p_b = p;
+
+						generate_struct_arr_get(tmp, 64, times-1, val);
+
+						switch (ot)
+						{
+						case OBJECT_TYPE_STRING:
+							fprintf(g_fp, "\t%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
+							break;
+						case OBJECT_TYPE_NUMBER:
+							char t[16] = {0};
+							if (is_convert(type))
+							{
+								sprintf(t, "%s_t", type);
+							}
+							fprintf(g_fp, "\t%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, type, val, times);
+							break;
+						case OBJECT_TYPE_STRUCT:
+
+							puts("here");
+							fprintf(g_fp, "\t%smqtt_to_dds_%s_convert(%s0, &%s);\n", tab, type, val, tmp);
+							break;
+
+						default:
+							break;
+						}
+					default:
+						break;
+					}
+
+			} else {
+				tab[++times] = '\t';
+			}
+		}
+		// p = strchr(p, '_') + 1;
 	}
 	else
 	{
-
 		char tmp[64];
 		generate_struct_arr_get(tmp, 64, times-1, val);
-		if (0 == strncmp(type, "string", strlen("string")))
+
+		switch (ot)
 		{
+		case OBJECT_TYPE_STRING:
 			fprintf(g_fp, "\t%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times - 1, type);
-		}
-		else if (0 == strncmp(type, "string_", strlen("string_")))
-		{
+			break;
+		case OBJECT_TYPE_STRING_T:
 			fprintf(g_fp, "\tstrcpy(%s%s, %s%d->value%s);\n", tab, tmp, val, times - 1, type);
-		}
-		else
-		{
+			break;
+		case OBJECT_TYPE_NUMBER:
 			char t[16] = {0};
 			if (is_convert(type))
 			{
@@ -316,64 +377,19 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type)
 			} else {
 				fprintf(g_fp, "\t%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, type, val, times - 1);
 			}
-
-		}
-		tab[times--] = '\0';
-	}
-
-	while (NULL != (p = strchr(p, '_')))
-	{
-
-		*p = '\0';
-		int num = atoi(p_b);
-
-		fprintf(g_fp, "\t%sint i%d = 0;\n", tab, times);
-		fprintf(g_fp, "\t%scJSON *%s%d = NULL;\n", tab, val, times);
-		fprintf(g_fp, "\t%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
-		*p++ = '_';
-		p_b = p;
-
-		if (NULL == strchr(p, '_'))
-		{
-
-			if (0 == strncmp(type, "string_", strlen("string_")))
-			{
-				char tmp[64];
-				generate_struct_arr_get(tmp, 64, times, val);
-				fprintf(g_fp, "%s\t\tstrcpy(%s, %s%d->valuestring);\n", tab, tmp, val, times);
-			}
-			else
-			{
-
-				tab[++times] = '\t';
-				fprintf(g_fp, "\t%sint i%d = 0;\n", tab, times);
-				fprintf(g_fp, "\t%scJSON *%s%d = NULL;\n", tab, val, times);
-				fprintf(g_fp, "\t%scJSON_ArrayForEach(%s%d, %s%d) {\n", tab, val, times - 1, val, times);
-				*p++ = '_';
-				p_b = p;
-
-				char tmp[64];
-				generate_struct_arr_get(tmp, 64, times, val);
-				if (0 == strncmp(type, "string", strlen("string")))
-				{
-					fprintf(g_fp, "\t\t%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
-				}
-				else
-				{
-					char t[16] = {0};
-					if (is_convert(type))
-					{
-						sprintf(t, "%s_t", type);
-					}
-					fprintf(g_fp, "\t\t%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, t, val, times);
-				}
-			}
+			break;
+		case OBJECT_TYPE_STRUCT:
+			fprintf(g_fp, "\t%smqtt_to_dds_%s_convert(%s0, &%s);\n", tab, type, val, tmp);
+			break;
+		default:
 			break;
 		}
 
-		tab[++times] = '\t';
+
 	}
 
+
+	tab[times--] = '\0';
 	int i = 0;
 	while (times >= 0)
 	{
@@ -393,7 +409,7 @@ void cJSON_GetArray(char *key, char *val)
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 		p += strlen("BOOLEAN_bool_");
-		cJSON_GetArrayCommon(p, val, "bool");
+		cJSON_GetArrayCommon(p, val, "bool", OBJECT_TYPE_NUMBER);
 	}
 	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
 	{
@@ -402,19 +418,28 @@ void cJSON_GetArray(char *key, char *val)
 		*p = '\0';
 		p++;
 
-		cJSON_GetArrayCommon(p, val, p_b);
+		cJSON_GetArrayCommon(p, val, p_b, OBJECT_TYPE_NUMBER);
 	}
 	else if (0 == strncmp(p, "STRING_T_", strlen("STRING_T_")))
 	{
 		// STRING_T_string_100_3222_2222
 		p += strlen("STRING_T_string_");
-		cJSON_GetArrayCommon(p, val, "string_");
+		cJSON_GetArrayCommon(p, val, "string_", OBJECT_TYPE_STRING_T);
 	}
 	else if (0 == strncmp(p, "STRING", strlen("STRING")))
 	{
 		p += strlen("STRING_string_");
-		cJSON_GetArrayCommon(p, val, "string");
+		cJSON_GetArrayCommon(p, val, "string", OBJECT_TYPE_STRING);
 	}
+	else if (0 == strncmp(p, "STRUCT", strlen("STRUCT")))
+	{
+		char *p_b =p + strlen("STRUCT_");
+		p = strchr(p_b, '@');
+		*p = '\0';
+		p += 2;
+		cJSON_GetArrayCommon(p, val, p_b, OBJECT_TYPE_STRUCT);
+	}
+
 }
 
 void clean_data(char *p)
