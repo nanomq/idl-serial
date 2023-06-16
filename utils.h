@@ -8,7 +8,8 @@ typedef enum
     OBJECT_TYPE_STRING,
     OBJECT_TYPE_STRING_T,
     OBJECT_TYPE_ARRAY,
-    OBJECT_TYPE_SEQUENCE
+    OBJECT_TYPE_SEQUENCE,
+    OBJECT_TYPE_STRUCT
 } object_type;
 
 typedef struct object object;
