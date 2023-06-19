@@ -522,6 +522,8 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	where = tmp + size;
 	while ((p = strstr(p, "sequence")))
 	{
+		char bak[strlen(p) + 1];
+		memcpy(bak, p, strlen(p) + 1);
 		clean_data(p);
 		fprintf(g_fp, "\n\t%ssize_t %s_sz%d = cJSON_GetArraySize(%s_array%d);", tab, val, i, val, i);
 		fprintf(g_fp, "\n\t%sst->%s = dds_%s__alloc();", tab, tmp, p);
@@ -531,6 +533,7 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 
 		size = snprintf(where, 128, "->_buffer[%s_i%d]", val, i);
 		where = where + size;
+		memcpy(p, bak, strlen(bak) + 1);
 
 		p++;
 		i++;
@@ -540,8 +543,9 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 
 	i = 0;
 	p = key;
+
 	memset(tmp, 0, 128);
-	size = snprintf(tmp, 128, "\n\t%sst->%s", tab, val);
+	size = snprintf(tmp, 128, "st->%s",val);
 	where = tmp + size;
 	char *p_b = p;
 	while ((p = strstr(p, "sequence")))
@@ -555,15 +559,22 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 
 	if (0 == strncmp(p_b, "string_", strlen("string_")))
 	{
-		fprintf(g_fp, "\tstrcpy(%s, cJSON_GetStringValue(%s_array%d));\n", tmp, val, i);
+		fprintf(g_fp, "\n\t%sstrcpy(%s, cJSON_GetStringValue(%s_array%d));\n", tab, tmp, val, i);
 	}
 	else if (0 == strncmp(p_b, "string", strlen("string")))
 	{
-		fprintf(g_fp, "\t%s = strdup(cJSON_GetStringValue(%s_array%d));\n", tmp, val, i);
+		fprintf(g_fp, "\n\t%s%s = strdup(cJSON_GetStringValue(%s_array%d));\n", tab, tmp, val, i);
+	}
+	else if (0 == strncmp(p_b, "struct", strlen("struct")))
+	{
+		p_b += strlen("struct_");
+		fprintf(g_fp, "\n\t%sif (0 != mqtt_to_dds_%s(%s_array%d, &%s)) {", tab, p_b, val, i, tmp);
+		fprintf(g_fp, "\n\t\t%sreturn -1;", tab);
+		fprintf(g_fp, "\n\t%s}\n", tab);
 	}
 	else
 	{
-		fprintf(g_fp, "\t%s = cJSON_GetNumberValue(%s_array%d);\n", tmp, val, i);
+		fprintf(g_fp, "\n\t%s%s = cJSON_GetNumberValue(%s_array%d);\n", tab, tmp, val, i);
 	}
 
 	while (*times > 0)
