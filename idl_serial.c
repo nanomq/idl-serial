@@ -27,29 +27,6 @@ static char g_map[4096] = { 0 };
 static int g_map_cursor = 0;
 static int g_map_num = 0;
 
-
-static void AddArrayCommonHelper(char *tab, char *val, int *times, int num, type t)
-{
-
-	fprintf(g_fp, "%scJSON *%s = cJSON_CreateArray();\n", tab, val);
-	switch (t)
-	{
-	case obj_t:
-		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
-		break;
-	case arr_t:
-		fprintf(g_fp, "%scJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, *times, val, *times + 1);
-		break;
-	default:
-		break;
-	}
-	fprintf(g_fp, "%sfor (int i = 0; (i < (size_t) %d); i++) {\n", tab, num);
-	tab[++(*times)] = '\t';
-	fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(st->%s[i]);\n", tab, val);
-	fprintf(g_fp, "%scJSON_AddItemToArray(%s, n);\n", tab, val);
-}
-
-
 void generate_struct_arr_get(char *dest, size_t len, int times, const char *val)
 {
 	size_t size = snprintf(dest, len, "st->%s", val);
@@ -64,7 +41,39 @@ void generate_struct_arr_get(char *dest, size_t len, int times, const char *val)
 }
 
 
-void cJSON_AddArrayCommon(char *p, char *val, char *type)
+static void AddArrayCommonHelper(char *tab, char *val, char *name, int *times, int num, type t)
+{
+
+	fprintf(g_fp, "%scJSON *%s = cJSON_CreateArray();\n", tab, val);
+	switch (t)
+	{
+	case obj_t:
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s);\n", tab, val, val);
+		break;
+	case arr_t:
+		fprintf(g_fp, "%scJSON_AddItemToArray(%s%d, %s);\n", tab, val, *times - 1, val);
+		break;
+	default:
+		break;
+	}
+	fprintf(g_fp, "%sfor (int i = 0; (i < (size_t) %d); i++) {\n", tab, num);
+	tab[++(*times)] = '\t';
+
+
+	char tmp[64];
+	generate_struct_arr_get(tmp, 64, *times-2, val);
+
+	if (name) {
+		fprintf(g_fp, "%scJSON *n = dds_to_mqtt_%s_convert(&%s[i]);\n", tab, name, tmp);
+	} else {
+		fprintf(g_fp, "%scJSON *n = cJSON_CreateNumber(%s[i]);\n", tab, tmp);
+	}
+	fprintf(g_fp, "%scJSON_AddItemToArray(%s, n);\n", tab, val);
+}
+
+
+
+void cJSON_AddArrayCommon(char *p, char *val, char *type, int ot)
 {
 	char *p_b = p;
 	int times = 0;
@@ -74,14 +83,20 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 	if (strchr(p, '_'))
 	{
 		fprintf(g_fp, "%scJSON *%s%d = cJSON_CreateArray();\n", tab, val, times);
-		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s%d)\n", tab, val, val, times);
+		fprintf(g_fp, "%scJSON_AddItemToObject(obj, \"%s\", %s%d);\n", tab, val, val, times);
 	}
 	else
 	{
 		int num = atoi(p);
-		char tmp[64];
-		size_t size = snprintf(tmp, 64, "st->%s", val);
-		AddArrayCommonHelper(tab, val, &times, num, obj_t);
+		switch (ot)
+		{
+		case OBJECT_TYPE_STRUCT:
+			AddArrayCommonHelper(tab, val, type, &times, num, obj_t);
+			break;
+		default:
+			AddArrayCommonHelper(tab, val, NULL, &times, num, obj_t);
+			break;
+		}
 	}
 
 	while (NULL != (p = strchr(p, '_')))
@@ -94,20 +109,28 @@ void cJSON_AddArrayCommon(char *p, char *val, char *type)
 		*p++ = '_';
 		p_b = p;
 
+		tab[++times] = '\t';
+
 		if (strchr(p, '_'))
 		{
-			fprintf(g_fp, "%s\tcJSON *%s%d = cJSON_CreateArray();\n", tab, val, times + 1);
-			fprintf(g_fp, "%s\tcJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times, val, times + 1);
+			fprintf(g_fp, "%scJSON *%s%d = cJSON_CreateArray();\n", tab, val, times);
+			fprintf(g_fp, "%scJSON_AddItemToArray(%s%d, %s%d);\n", tab, val, times-1, val, times);
 		}
 		else
 		{
 			num = atoi(p);
-			char tmp[64];
-			generate_struct_arr_get(tmp, 64, times, val);
-			AddArrayCommonHelper(tab, val, &times, num, arr_t);
+			switch (ot)
+			{
+			case OBJECT_TYPE_STRUCT:
+				AddArrayCommonHelper(tab, val, type, &times, num, arr_t);
+				break;
+			default:
+				AddArrayCommonHelper(tab, val, NULL, &times, num, arr_t);
+				break;
+			}
+
 		}
 
-		tab[++times] = '\t';
 	}
 
 	while (times)
@@ -129,7 +152,7 @@ void cJSON_AddArray(char *key, char *val)
 	{
 
 		p += strlen("BOOLEAN_bool_");
-		cJSON_AddArrayCommon(p, val, "Number");
+		cJSON_AddArrayCommon(p, val, "Number", OBJECT_TYPE_NUMBER);
 	}
 	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
 	{
@@ -137,19 +160,30 @@ void cJSON_AddArray(char *key, char *val)
 		p += strlen("NUMBER_");
 		p = strchr(p, '_') + 1;
 
-		cJSON_AddArrayCommon(p, val, "Double");
+		cJSON_AddArrayCommon(p, val, "Double", OBJECT_TYPE_NUMBER);
 	}
 	else if (0 == strncmp(p, "STRING_T_", strlen("STRING_T_")))
 	{
 		// STRING_T_string_100_3222_2222
 		p += strlen("STRING_T_string_");
-		cJSON_AddArrayCommon(p, val, "String");
+		cJSON_AddArrayCommon(p, val, "String", OBJECT_TYPE_STRING_T);
 	}
 	else if (0 == strncmp(p, "STRING", strlen("STRING")))
 	{
 		p += strlen("STRING_string_");
-		cJSON_AddArrayCommon(p, val, "String");
+		cJSON_AddArrayCommon(p, val, "String", OBJECT_TYPE_STRING);
 	}
+	else if (0 == strncmp(p, "STRUCT", strlen("STRUCT")))
+	{
+		char *p_b =p + strlen("STRUCT_");
+		p = strchr(p_b, '@');
+		*p = '\0';
+		p+= 2;
+		cJSON_AddArrayCommon(p, val, p_b, OBJECT_TYPE_STRUCT);
+		// recover for next time use
+		*(p-2) = '@';
+	}
+
 }
 
 void cJSON_AddSequence(char *key, char *val, int *times)
@@ -338,8 +372,6 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 							fprintf(g_fp, "\t%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, type, val, times);
 							break;
 						case OBJECT_TYPE_STRUCT:
-
-							puts("here");
 							fprintf(g_fp, "\t%smqtt_to_dds_%s_convert(%s0, &%s);\n", tab, type, val, tmp);
 							break;
 
