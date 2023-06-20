@@ -579,6 +579,13 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	{
 		fprintf(g_fp, "\n\t%s%s = strdup(cJSON_GetStringValue(%s_array%d));\n", tab, tmp, val, i);
 	}
+	else if (0 == strncmp(p_b, "struct", strlen("struct")))
+	{
+		p_b += strlen("struct_");
+		fprintf(g_fp, "\n\t%sif (0 != mqtt_to_dds_%s(%s_array%d, &%s)) {", tab, p_b, val, i, tmp);
+		fprintf(g_fp, "\n\t\t%sreturn -1;", tab);
+		fprintf(g_fp, "\n\t%s}\n", tab);
+	}
 	else
 	{
 		fprintf(g_fp, "\n\t%s%s = cJSON_GetNumberValue(%s_array%d);\n", tab, tmp, val, i);
