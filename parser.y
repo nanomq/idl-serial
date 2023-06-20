@@ -251,6 +251,13 @@ data_type: NUMBER
                 log_info("STRING");
                 $$ = object_alloc(OBJECT_TYPE_STRING, "string");
         }
+        | VARIABLE
+        {
+                log_info("VARIABLE");
+                char tmp[64] = { 0 };
+                snprintf(tmp, 64, "struct_%s", $1);
+                $$ = object_alloc(OBJECT_TYPE_STRUCT, tmp);
+        }
         | STRING LBRAC INTEGER RBRAC
         {
                 log_info("STRING LBRAC INTEGER RBRAC");
@@ -284,12 +291,15 @@ data_type: NUMBER
                          snprintf(tmp, 64, "sequence_%s", $3->data);
                          log_info("SEQUENCE VARIABLE SEMIC");
                          break;
+                 case OBJECT_TYPE_STRUCT:
+                         snprintf(tmp, 64, "%s", $3->data);
+                         log_info("STRUCT VARIABLE SEMIC");
+                         break;
                  default:
                          log_err("Unsupport type: %d", $3->type);
                          break;
                  }
  
-
                 $$ = object_alloc(OBJECT_TYPE_SEQUENCE, tmp);
                 log_info("%s", tmp);
 
