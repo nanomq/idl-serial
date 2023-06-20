@@ -211,6 +211,13 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 		{
 			fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);", tab, val, val, val);
 		}
+		else if (0 == strncmp(p_b, "struct", strlen("struct")))
+		{
+			fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateArray();", tab, val);
+			fprintf(g_fp, "\n%sfor (int i = 0; i < st->%s->_length; i++) {", tab, val);
+			fprintf(g_fp, "\n\t%scJSON * n = dds_to_mqtt_%s_convert(&st->%s->_buffer[i]);", tab, key, val);
+			fprintf(g_fp, "\n%s};", tab);
+		}
 		else
 		{
 			fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateDoubleArray(st->%s->_buffer, st->%s->_length);", tab, val, val, val);
@@ -236,6 +243,13 @@ void cJSON_AddSequence(char *key, char *val, int *times)
 			if (0 == strncmp(p, "string", strlen("string")))
 			{
 				fprintf(g_fp, "\n%scJSON * %s_arr%d = cJSON_CreateStringArray(st->%s->_buffer, st->%s->_length);", tab, val, i, tmp, tmp);
+			}
+			else if (0 == strncmp(p, "struct", strlen("struct")))
+			{
+				fprintf(g_fp, "\n%scJSON * %s_arr0 = cJSON_CreateArray();", tab, val);
+				fprintf(g_fp, "\n%sfor (int i = 0; i < st->%s->_length; i++) {", tab, val);
+				fprintf(g_fp, "\n\t%scJSON * n = dds_to_mqtt_%s_convert(&st->%s->_buffer[i]);", tab, key, val);
+				fprintf(g_fp, "\n%s};", tab);
 			}
 			else
 			{
@@ -564,13 +578,6 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 	else if (0 == strncmp(p_b, "string", strlen("string")))
 	{
 		fprintf(g_fp, "\n\t%s%s = strdup(cJSON_GetStringValue(%s_array%d));\n", tab, tmp, val, i);
-	}
-	else if (0 == strncmp(p_b, "struct", strlen("struct")))
-	{
-		p_b += strlen("struct_");
-		fprintf(g_fp, "\n\t%sif (0 != mqtt_to_dds_%s(%s_array%d, &%s)) {", tab, p_b, val, i, tmp);
-		fprintf(g_fp, "\n\t\t%sreturn -1;", tab);
-		fprintf(g_fp, "\n\t%s}\n", tab);
 	}
 	else
 	{
