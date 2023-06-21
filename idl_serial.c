@@ -380,7 +380,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 						case OBJECT_TYPE_STRING:
 							fprintf(g_fp, "\t%s%s = strdup(%s%d->value%s);\n", tab, tmp, val, times, type);
 							break;
-						case OBJECT_TYPE_NUMBER:
+						case OBJECT_TYPE_NUMBER:;
 							char t[16] = {0};
 							if (is_convert(type))
 							{
@@ -418,7 +418,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 		case OBJECT_TYPE_STRING_T:
 			fprintf(g_fp, "\tstrcpy(%s%s, %s%d->value%s);\n", tab, tmp, val, times - 1, type);
 			break;
-		case OBJECT_TYPE_NUMBER:
+		case OBJECT_TYPE_NUMBER:;
 			char t[16] = {0};
 			if (is_convert(type))
 			{
