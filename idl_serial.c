@@ -27,6 +27,7 @@ static char g_map[4096] = { 0 };
 static int g_map_cursor = 0;
 static int g_map_num = 0;
 
+// Concatenate the left-hand side of a multidimensional array inside a struct.
 void generate_struct_arr_get(char *dest, size_t len, int times, const char *val)
 {
 	size_t size = snprintf(dest, len, "st->%s", val);
@@ -367,6 +368,7 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 
 					case OBJECT_TYPE_STRING:
 					case OBJECT_TYPE_NUMBER:
+					case OBJECT_TYPE_BOOLEAN:
 					case OBJECT_TYPE_STRUCT:
 
 						tab[++times] = '\t';
@@ -388,6 +390,8 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 							}
 							fprintf(g_fp, "\t%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, type, val, times);
 							break;
+						case OBJECT_TYPE_BOOLEAN:
+							fprintf(g_fp, "\t%s%s = cJSON_IsTrue(%s%d);\n", tab, tmp, val, times);
 						case OBJECT_TYPE_STRUCT:
 							fprintf(g_fp, "\t%smqtt_to_dds_%s_convert(%s0, &%s);\n", tab, type, val, tmp);
 							break;
@@ -427,6 +431,8 @@ void cJSON_GetArrayCommon(char *p, char *val, char *type, int ot)
 				fprintf(g_fp, "\t%s%s = (%s) %s%d->valuedouble;\n", tab, tmp, type, val, times - 1);
 			}
 			break;
+		case OBJECT_TYPE_BOOLEAN:
+			fprintf(g_fp, "\t%s%s = cJSON_IsTrue(%s%d);\n", tab, tmp, val, times - 1);
 		case OBJECT_TYPE_STRUCT:
 			fprintf(g_fp, "\t%smqtt_to_dds_%s_convert(%s0, &%s);\n", tab, type, val, tmp);
 			break;
@@ -458,7 +464,7 @@ void cJSON_GetArray(char *key, char *val)
 	if (0 == strncmp(p, "BOOLEAN", strlen("BOOLEAN")))
 	{
 		p += strlen("BOOLEAN_bool_");
-		cJSON_GetArrayCommon(p, val, "bool", OBJECT_TYPE_NUMBER);
+		cJSON_GetArrayCommon(p, val, "bool", OBJECT_TYPE_BOOLEAN);
 	}
 	else if (0 == strncmp(p, "NUMBER", strlen("NUMBER")))
 	{
@@ -612,6 +618,7 @@ void cJSON_GetSequence(char *key, char *val, int *times)
 void cJSON_Get(cJSON *item)
 {
 	char fmt_non_cp[] = "\t\tst->%s = item->value%s;\n";
+	char fmt_bool[] = "\t\tst->%s = cJSON_IsTrue(item);\n";
 	char fmt_cp[] = "\t\ttstrncpy(st->%s, item->value%s, %d);\n";
 	char fmt_dup[] = "\t\tst->%s = strdup(item->value%s);\n";
 	char *type = item->string;
@@ -625,7 +632,7 @@ void cJSON_Get(cJSON *item)
 
 	if (0 == strcmp(type, "BOOLEAN"))
 	{
-		snprintf(ret, 64, fmt_non_cp, name, "int");
+		snprintf(ret, 64, fmt_bool, name);
 	}
 	else if (0 == strcmp(type, "NUMBER"))
 	{
