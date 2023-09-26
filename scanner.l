@@ -9,7 +9,8 @@
 %option noyywrap
 
 /* Ignored */
-Comment                 (("//")[^\n]*)|("/*".*"*/")
+CComments               ("/*"([^*]|\*+[^*/])*\*+"/")
+Comment                 (("//")[^\n]*)|{CComments}
 WhiteSpace              ([ \t\r\n]+)
 Ignored                 {WhiteSpace}|{Comment}
 
