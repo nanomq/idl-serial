@@ -10,7 +10,8 @@
 
 /* Ignored */
 CComments               ("/*"([^*]|\*+[^*/])*\*+"/")
-Comment                 (("//")[^\n]*)|{CComments}
+ROS2Comments            (("@")([^)])*(")"))
+Comment                 (("//")[^\n]*)|{CComments}|{ROS2Comments}
 WhiteSpace              ([ \t\r\n]+)
 Ignored                 {WhiteSpace}|{Comment}
 
